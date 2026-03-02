@@ -1,1 +1,1 @@
-random
+TOTAL_TIME
