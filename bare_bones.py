@@ -43,8 +43,11 @@ SPACE_SIZE = 200
 TOTAL_TIME = 5000
 TIME_BUFFER = 100
 
-ez_matrix= np.zeros((TIME_BUFFER, SPACE_SIZE))
-hy_matrix = np.zeros((TIME_BUFFER, SPACE_SIZE))
+ez_array= np.zeros(SPACE_SIZE)
+hy_array= np.zeros(SPACE_SIZE)
+ez_buffer= np.zeros((TIME_BUFFER, SPACE_SIZE))
+hy_buffer= np.zeros((TIME_BUFFER, SPACE_SIZE))
+
 imp0 = 337.0
 
 with h5py.File("wave_data.hdf5", "w") as f:
@@ -52,17 +55,20 @@ with h5py.File("wave_data.hdf5", "w") as f:
     ez_dset = f.create_dataset("elec_fdata", (TOTAL_TIME, SPACE_SIZE))
 
     # Time loop
-    
     for qTime in range (0, TOTAL_TIME):
-        qBuffer = qTime % TIME_BUFFE
-        hy_matrix[qBuffer, :] = update_magnetic_field(hy_matrix[qBuffer, :], ez_matrix[qBuffer, :], imp0, SPACE_SIZE)
-        ez_matrix[qBuffer, :] = update_electric_field(ez_matrix[qBuffer, :], hy_matrix[qBuffer, :], imp0, SPACE_SIZE)
+        hy_array = update_magnetic_field(hy_array, ez_array, imp0, SPACE_SIZE)
+        ez_array = update_electric_field(ez_array, hy_array, imp0, SPACE_SIZE)
         
-        if (qBuffer == 0)  and (qTime != 0):
-            ez_dset[qTime - TIME_BUFFER:qTime, 0:SPACE_SIZE] = ez_matrix
-            hy_dset[qTime - TIME_BUFFER:qTime, 0:SPACE_SIZE] = hy_matrix
+        #Buffer stuff
+        buffer_index = qTime % TIME_BUFFER
+        ez_buffer[buffer_index, :] = ez_array
+        hy_buffer[buffer_index, :] = hy_array
 
-        ez_matrix[qBuffer, 0] = np.exp((-(qBuffer - 30)**2)/100.)
+        if (buffer_index == 0)  and (qTime != 0):
+            ez_dset[qTime - TIME_BUFFER:qTime, 0:SPACE_SIZE] = ez_buffer
+            hy_dset[qTime - TIME_BUFFER:qTime, 0:SPACE_SIZE] = hy_buffer
+
+        ez_array[0] = np.exp((-(qTime - 30)**2)/100.)
 
 """
 #Normalization of the values
