@@ -1,9 +1,9 @@
 import numpy as np
-import numba 
+import numba as nb
 import h5py
 
 SPACE_SIZE = 200
-TOTAL_TIME = 500
+TOTAL_TIME = 50000
 
 ez = np.zeros(SPACE_SIZE)
 hy = np.zeros(SPACE_SIZE)
@@ -32,10 +32,10 @@ def hpf5_normalization(file_name, dataset_name, maxValue):
 
 
 
-
+@nb.njit
 with h5py.File("wave_data.hdf5", "w") as f:
-    hy_data = f.create_dataset("mag_fdata", (500, SPACE_SIZE))
-    ez_data = f.create_dataset("elec_fdata", (500, SPACE_SIZE))
+    hy_data = f.create_dataset("mag_fdata", (TOTAL_TIME, SPACE_SIZE))
+    ez_data = f.create_dataset("elec_fdata", (TOTAL_TIME, SPACE_SIZE))
 
     # Time loop
     for qTime in range (0, TOTAL_TIME):
