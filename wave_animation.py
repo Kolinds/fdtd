@@ -21,12 +21,13 @@ DATASET_NAME = "elec_fdata"
 TOTAL_TIME=500
 SPACE_SIZE = 200
 
+
 space_array = np.linspace(0, SPACE_SIZE, SPACE_SIZE)
 wave_line, = ax1.plot(space_array, np.zeros_like(space_array), color = "red")
 time_text = ax1.text(0.05, 0.95, 'CUCARACHA', transform=ax1.transAxes, fontsize=12)
 
 with h5py.File(H5FILE_NAME, "r") as f:
-        all_data = f[DATASET_NAME][:]
+        all_data = f[DATASET_NAME][:TOTAL_TIME, :SPACE_SIZE]
 
 def anime_func(frame):
     present_data = all_data[frame, :]
@@ -34,6 +35,6 @@ def anime_func(frame):
     time_text.set_text(f'Frame: {frame}')
     return wave_line, time_text
 
-ani = animation.FuncAnimation(fig=fig, func=anime_func, frames=TOTAL_TIME, interval=30)
+ani = animation.FuncAnimation(fig=fig, func=anime_func, frames=TOTAL_TIME, interval=3)
 
 plt.show()

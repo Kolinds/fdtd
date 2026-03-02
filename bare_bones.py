@@ -4,7 +4,7 @@ import h5py
 
 
 def hpf5_maxValue(file_name, dataset_name):
-    DIM_JUMP = 10
+    DIM_JUMP = 100
     total_max = 0
     with h5py.File(file_name, "r") as f:
         dset = f[dataset_name]
@@ -15,7 +15,7 @@ def hpf5_maxValue(file_name, dataset_name):
     return total_max
 
 def hpf5_normalization(file_name, dataset_name, maxValue):
-    DIM_JUMP = 10
+    DIM_JUMP = 100
     with h5py.File(file_name, "r+") as f:
         dset = f[dataset_name]
         for actual_line in range(0, dset.shape[0], DIM_JUMP):
@@ -23,14 +23,14 @@ def hpf5_normalization(file_name, dataset_name, maxValue):
             norm_matrix = jump_matrix / maxValue
             dset[actual_line:actual_line+DIM_JUMP, ...] = norm_matrix
 
-
+@njit
 def update_magnetic_field(hy, ez, imp0, SPACE_SIZE):
     for m in range(0, SPACE_SIZE - 1):
         hy[m] = hy[m] + (1.0 / imp0) * (ez[m + 1] - ez[m])
         
     return hy
 
-
+@njit
 def update_electric_field(ez, hy, imp0, SPACE_SIZE):
     for m in range(1, SPACE_SIZE):
         ez[m] = ez[m] + imp0 * (hy[m] - hy[m - 1])
@@ -40,7 +40,7 @@ def update_electric_field(ez, hy, imp0, SPACE_SIZE):
 
 
 SPACE_SIZE = 200
-TOTAL_TIME = 5000
+TOTAL_TIME = 500000
 TIME_BUFFER = 100
 
 ez_array= np.zeros(SPACE_SIZE)
@@ -61,22 +61,23 @@ with h5py.File("wave_data.hdf5", "w") as f:
         
         #Buffer stuff
         buffer_index = qTime % TIME_BUFFER
-        ez_buffer[buffer_index, :] = ez_array
-        hy_buffer[buffer_index, :] = hy_array
 
         if (buffer_index == 0)  and (qTime != 0):
             ez_dset[qTime - TIME_BUFFER:qTime, 0:SPACE_SIZE] = ez_buffer
             hy_dset[qTime - TIME_BUFFER:qTime, 0:SPACE_SIZE] = hy_buffer
 
+        ez_buffer[buffer_index, :] = ez_array
+        hy_buffer[buffer_index, :] = hy_array
+        
         ez_array[0] = np.exp((-(qTime - 30)**2)/100.)
 
-"""
+
 #Normalization of the values
 max_mag = hpf5_maxValue("wave_data.hdf5", "mag_fdata")
 hpf5_normalization("wave_data.hdf5", "mag_fdata", max_mag)
 max_elec = hpf5_maxValue("wave_data.hdf5", "elec_fdata")
 hpf5_normalization("wave_data.hdf5", "elec_fdata", max_elec)
-"""
+
 
 # holi uwu
 
