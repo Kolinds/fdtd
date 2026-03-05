@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import h5py
-
 import matplotlib.animation as animation
 
 plt.style.use('dark_background')
@@ -18,7 +17,7 @@ for borde in ("left", "right"):
 
 H5FILE_NAME="wave_data.hdf5"
 DATASET_NAME = "elec_fdata"
-TOTAL_TIME=500
+TOTAL_TIME = 1000
 SPACE_SIZE = 200
 
 
@@ -30,11 +29,12 @@ with h5py.File(H5FILE_NAME, "r") as f:
         all_data = f[DATASET_NAME][:TOTAL_TIME, :SPACE_SIZE]
 
 def anime_func(frame):
+    frame = frame
     present_data = all_data[frame, :]
     wave_line.set_ydata(present_data)
     time_text.set_text(f'Frame: {frame}')
     return wave_line, time_text
 
-ani = animation.FuncAnimation(fig=fig, func=anime_func, frames=TOTAL_TIME, interval=3)
+ani = animation.FuncAnimation(fig=fig, func=anime_func, frames=TOTAL_TIME, interval = 10)
 
 plt.show()

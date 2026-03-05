@@ -14,6 +14,7 @@ def hpf5_maxValue(file_name, dataset_name):
             if (abs(total_max) < (actual_max)): total_max = actual_max
     return total_max
 
+
 def hpf5_normalization(file_name, dataset_name, maxValue):
     DIM_JUMP = 100
     with h5py.File(file_name, "r+") as f:
@@ -26,21 +27,19 @@ def hpf5_normalization(file_name, dataset_name, maxValue):
 @njit
 def update_magnetic_field(hy, ez, imp0, SPACE_SIZE):
     for m in range(0, SPACE_SIZE - 1):
-        hy[m] = hy[m] + (1.0 / imp0) * (ez[m + 1] - ez[m])
-        
+        hy[m] = hy[m] + (1.0 / imp0) * (ez[m + 1] - ez[m])  
     return hy
 
 @njit
 def update_electric_field(ez, hy, imp0, SPACE_SIZE):
     for m in range(1, SPACE_SIZE):
         ez[m] = ez[m] + imp0 * (hy[m] - hy[m - 1])
-        
     return ez
 
 
 
 SPACE_SIZE = 200
-TOTAL_TIME = 500000
+TOTAL_TIME = 1000
 TIME_BUFFER = 100
 
 ez_array= np.zeros(SPACE_SIZE)
@@ -56,9 +55,20 @@ with h5py.File("wave_data.hdf5", "w") as f:
 
     # Time loop
     for qTime in range (0, TOTAL_TIME):
+
+        #Absorbing boundary condition (ABC) mag
+        hy_array[SPACE_SIZE-1] = hy_array[SPACE_SIZE-2]
         hy_array = update_magnetic_field(hy_array, ez_array, imp0, SPACE_SIZE)
+        #Correcion TFSF para quitar el efecto del incidente
+        hy_array[49] -= np.exp((-(qTime - 30)**2)/100.) / imp0
+
+        #Absorbing boundary condition (ABC) elec
+        ez_array[0] = ez_array[1]
         ez_array = update_electric_field(ez_array, hy_array, imp0, SPACE_SIZE)
-        
+        #Correcion TFSF para añadir el efecto del incidente
+        ez_array[50] += np.exp((-(qTime + 0.5 - (-0.5) - 30)**2)/100.)
+
+
         #Buffer stuff
         buffer_index = qTime % TIME_BUFFER
 
@@ -69,14 +79,25 @@ with h5py.File("wave_data.hdf5", "w") as f:
         ez_buffer[buffer_index, :] = ez_array
         hy_buffer[buffer_index, :] = hy_array
         
-        ez_array[0] = np.exp((-(qTime - 30)**2)/100.)
+        """ 
+        Only equal: = -> Hardwired source
+        Summed: += -> Source 
+        ez_array[50] += np.exp((-(30 - 30)**2)/100)
+        """
+        
+
+        # ABC's in 1D with Courant Limit 
+
+
 
 
 #Normalization of the values
+
 max_mag = hpf5_maxValue("wave_data.hdf5", "mag_fdata")
 hpf5_normalization("wave_data.hdf5", "mag_fdata", max_mag)
 max_elec = hpf5_maxValue("wave_data.hdf5", "elec_fdata")
 hpf5_normalization("wave_data.hdf5", "elec_fdata", max_elec)
+
 
 
 # holi uwu
