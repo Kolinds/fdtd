@@ -13,12 +13,12 @@ class HDF5Writer:
         self.ez_buffer= None
         self.hy_buffer= None
 
-    def open_file(self):
+    def open_file(self, edset_name, hdset_name):
         #Open file and initialize datasets and buffers, for E, H-fields
         self.file = h5py.File(self.file_name, "w")
 
-        self.ez_dset = self.file.create_dataset("elec_fdata", (self.total_time, self.space_size))
-        self.hy_dset = self.file.create_dataset("mag_fdata", (self.total_time, self.space_size - 1))
+        self.ez_dset = self.file.create_dataset(edset_name, (self.total_time, self.space_size))
+        self.hy_dset = self.file.create_dataset(hdset_name, (self.total_time, self.space_size - 1))
         self.ez_buffer= np.zeros((self.time_buffer, self.space_size))
         self.hy_buffer= np.zeros((self.time_buffer, self.space_size - 1))
 
@@ -50,7 +50,7 @@ def maxValue(file_name, dataset_name, jump):
     return total_max
 
 
-def normalization(file_name, dataset_name, maxValue, jump):
+def normalization(file_name, dataset_name, jump, maxValue):
     with h5py.File(file_name, "r+") as f:
         dset = f[dataset_name]
         for actual_line in range(0, dset.shape[0], jump):
