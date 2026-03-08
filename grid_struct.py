@@ -49,8 +49,8 @@ class Grid():
         """
     
     def TFSF_boundary(self, current_time, location, etime_delay, eloc_delay, htime_delay, hloc_delay, width, courant, imp):
-        self.hy[49] -= incf.ezfield(current_time, htime_delay, hloc_delay, location, width, courant) / imp #Correcion TFSF para quitar el efecto del incidente
-        self.ez[50] += incf.ezfield(current_time, etime_delay, eloc_delay, location, width, courant) #Correcion TFSF para añadir el efecto del incidente
+        self.hy[49] -= incf.ezfield(current_time, location, htime_delay, hloc_delay, width, courant) / imp #Correcion TFSF para quitar el efecto del incidente
+        self.ez[50] += incf.ezfield(current_time, location, etime_delay, eloc_delay, width, courant) #Correcion TFSF para añadir el efecto del incidente
 
         """ 
         Only equal: = -> Hardwired source

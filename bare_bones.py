@@ -1,6 +1,7 @@
 import hdf5_handler as h5h
 import grid_struct as gr
 import maxwell_update as upd
+import numpy as np
 
 FILE_NAME="wave_data.hdf5"
 EDSET_NAME = "elec_fdata"
@@ -19,6 +20,7 @@ grid = gr.Grid(SPACE_SIZE)
 
 
 hdf5_file.open_file(EDSET_NAME, HDSET_NAME)
+grid.place_materials(SPACE_SIZE, LOSS, LOSS_LAYER, IMP0)
 for qTime in range (0, TOTAL_TIME):
 
     grid.hy = upd.update_magnetic_field(grid.hy, grid.ez, grid.chyh, grid.chye, SPACE_SIZE - 1)
