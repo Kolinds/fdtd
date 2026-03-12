@@ -32,6 +32,13 @@ class HDF5Writer:
         self.ez_buffer[buffer_index, :] = ez_array
         self.hy_buffer[buffer_index, :] = hy_array
 
+    def save_array(self, location_group, dataset_name, array_data):
+        if self.file is None:
+            print("Error: El archivo no está abierto.")
+            return
+        group = self.file.require_group(location_group)
+        group.create_dataset(dataset_name, data=array_data)
+
 
     def close_file(self):
         if self.file is not None:
@@ -50,10 +57,10 @@ def maxValue(file_name, dataset_name, jump):
     return total_max
 
 
-def normalization(file_name, dataset_name, jump, maxValue):
+def normalization(file_name, dataset_name, jump, max_val):
     with h5py.File(file_name, "r+") as f:
         dset = f[dataset_name]
         for actual_line in range(0, dset.shape[0], jump):
             jump_matrix = dset[actual_line:actual_line+jump, ...]
-            norm_matrix = jump_matrix / maxValue
+            norm_matrix = jump_matrix / max_val
             dset[actual_line:actual_line+jump, ...] = norm_matrix

@@ -1,6 +1,8 @@
 import numpy as np
 from numba import njit
 
+
+#Incident fields and wavelets
 @njit
 def ezfield(current_time, location, time_delay, loc_delay, width, courant):
     return np.exp((-(current_time + time_delay - (location + loc_delay) / courant)**2)/width)
@@ -21,3 +23,15 @@ def rampf(current_time, location, time_delay, loc_delay, steps_wavelength, ramp_
 def ricker(current_time, location, time_delay, loc_delay, steps_pkwavelength, delay_multiple, courant):
     exponent = ((np.pi)*((courant*(current_time + time_delay) - (location + loc_delay))/steps_pkwavelength - delay_multiple))**2
     return (1-2*exponent)*np.exp(-exponent)
+
+
+#Calculates loss (conductivity) necessary for specific penetration distance at set wavelength
+def adjusted_loss(ppw, penetration_dist, er, ur, courant):
+    return (np.pi / ppw)*courant*((1+(ppw**2/(2 * np.pi**2 * penetration_dist**2 * er * ur)))**2 - 1)**0.5
+
+
+
+
+
+
+    
