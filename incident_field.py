@@ -31,6 +31,23 @@ def adjusted_loss(ppw, penetration_dist, er, ur, courant):
 
 
 
+"""CODIGO EN FASE DE ELABORACION
+def transmission_c(location, incidident_f, transmitted_f, total_freq, total_time):
+    transm_array = np.zeros(total_freq, dtype=np.complex64)
+    for n_freq in range(0, total_freq):
+        transm_array[n_freq] = np.exp(1j * 4 * np.pi * location * n_freq / total_time) * (transmitted_f[n_freq] / incidident_f[n_freq])
+    
+    return transm_array
+
+
+incident_f = hdf5_handler.retrieve_array("/Probes/", "Probe1")
+transmitted_f = hdf5_handler.retrieve_array("/Probes/", "Probe2")
+trasmission_coef = df.transmission_c(275, incident_f, transmitted_f, cf.TOTAL_TIME //2 + 1, cf.TOTAL_TIME)
+hdf5_handler.save_array("Coef/", "transmission", trasmission_coef)
+"""
+
+    
+
 
 
 

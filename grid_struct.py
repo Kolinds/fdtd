@@ -33,8 +33,8 @@ class Grid():
 
     def save_probes(self, file: h5py.File):
         for actual_probe in self.stored_probes:
-            group = file.require_group("/probes/")
-            group.create_dataset(actual_probe["name"], data=actual_probe["array"])
+            group = file.require_group("/Probes/")
+            group.create_dataset(actual_probe["name"], data=(1/self.space_size)*actual_probe["array"])
             
         
     def place_materials(self, space_size, dielectric_layer, loss, loss_layer, imp):
@@ -97,6 +97,7 @@ class Grid():
             actual_probe["array"].real += self.ez[actual_probe["location"]]*np.cos(angles_array)
             actual_probe["array"].imag -= self.ez[actual_probe["location"]]*np.sin(angles_array)
 
+  
 
 
 

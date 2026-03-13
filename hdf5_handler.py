@@ -39,6 +39,19 @@ class HDF5Writer:
         group = self.file.require_group(location_group)
         group.create_dataset(dataset_name, data=array_data)
 
+    def retrieve_array(self, location_group: str, dataset_name: str):
+        if self.file is None:
+            print("Error: El archivo no está abierto.")
+            return
+        
+        with h5py.File(self.file_name, "r") as f:
+            full_path = f"{location_group.rstrip('/')}/{dataset_name}"
+            
+            if full_path in f:
+                return f[full_path][:]
+            else:
+                print(f"Error: No se encontró '{full_path}' en {self.file_name}")
+                return None
 
     def close_file(self):
         if self.file is not None:
