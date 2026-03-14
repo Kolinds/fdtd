@@ -23,7 +23,8 @@ for qTime in range (0, cf.TOTAL_TIME):
     grid.r_DFT(qTime)
 
     hdf5_handler.update_file(qTime, grid.ez, grid.hy)
-    
+
+"""
 grid.reset_fields()
 grid.set_free_space(cf.SPACE_SIZE, cf.IMP0)
 grid.add_probe(200, "Probe2", cf.TOTAL_TIME//2 + 1)
@@ -48,7 +49,7 @@ transmitted_f = hdf5_handler.retrieve_array("/Probes/", "Probe2")
 trasmission_coef = df.transmission_c(280-200, incident_f, transmitted_f, cf.TOTAL_TIME //2 + 1, cf.TOTAL_TIME)
 hdf5_handler.save_array("Coef/", "transmission", trasmission_coef)
 
-
+"""
 h5h.normalization(cf.FILE_NAME, cf.HDSET_NAME, cf.BUFFER_JUMP, h5h.maxValue(cf.FILE_NAME, cf.HDSET_NAME, 100)) #Normalization of the H-field
 h5h.normalization(cf.FILE_NAME, cf.EDSET_NAME, cf.BUFFER_JUMP, h5h.maxValue(cf.FILE_NAME, cf.EDSET_NAME, 100)) #Normalization of the E-field
 
