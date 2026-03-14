@@ -30,6 +30,14 @@ def adjusted_loss(ppw, penetration_dist, er, ur, courant):
     return (np.pi / ppw)*courant*((1+(ppw**2/(2 * np.pi**2 * penetration_dist**2 * er * ur)))**2 - 1)**0.5
 
 
+def transmission_c(location, incidident_f, transmitted_f, total_freq, total_time):
+    transm_array = np.zeros(total_freq, dtype=np.complex64)
+    for n_freq in range(0, total_freq):
+        transm_array[n_freq] = np.exp(1j * 4 * np.pi * location * n_freq / total_time) * (transmitted_f[n_freq] / incidident_f[n_freq])
+    
+    return transm_array
+
+
 
 """CODIGO EN FASE DE ELABORACION
 def transmission_c(location, incidident_f, transmitted_f, total_freq, total_time):

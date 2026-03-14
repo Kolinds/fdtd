@@ -20,6 +20,11 @@ class Grid():
 
         #List for storing probing arrays
         self.stored_probes = []
+    
+    def reset_fields(self):
+        self.ez= np.zeros(self.space_size)
+        self.hy= np.zeros(self.space_size - 1)
+
 
     def add_probe(self, location, array_name, array_size):
         new_probe = np.zeros(array_size, dtype=np.complex64)
@@ -35,7 +40,7 @@ class Grid():
         for actual_probe in self.stored_probes:
             group = file.require_group("/Probes/")
             group.create_dataset(actual_probe["name"], data=(1/self.space_size)*actual_probe["array"])
-            
+        self.stored_probes.clear()
         
     def place_materials(self, space_size, dielectric_layer, loss, loss_layer, imp):
         #Magnetic field material properties
@@ -58,6 +63,18 @@ class Grid():
             else: #lossy Boundary layer
                 self.ceze[m] = (1.0 - loss) / (1.0 + loss)
                 self.cezh[m] = (imp / 9.0) / (1.0 + loss)
+
+    def set_free_space(self, space_size, imp):
+        #Magnetic field material properties
+        for m in range(0, space_size - 1):
+                self.chyh[m] = 1.0
+                self.chye[m] = 1 / imp
+
+        #Electric field material properties
+        for m in range(0, space_size): 
+                self.ceze[m] = 1.0
+                self.cezh[m] = imp
+
 
     def abc_boundary(self):
         # ABC's in 1D with Courant Limit 
