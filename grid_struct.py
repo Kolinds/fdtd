@@ -81,11 +81,9 @@ class Grid():
         self.ez[0] = self.ez[1]
 
         """
-        Absorbing boundary condition (ABC) mag, deprecated
+        Absorbing boundary condition (ABC), deprecated. 
         hy[SPACE_SIZE-1] = hy[SPACE_SIZE-2]
-
-        This ABC does not work inside dielectric
-        ez[SPACE_SIZE-1] = ez[SPACE_SIZE-2]
+        ez[SPACE_SIZE-1] = ez[SPACE_SIZE-2] This ABC does not work inside dielectric
         """
     
     def TFSF_gaussian(self, current_time, tfsf_boundary, location, etime_delay, eloc_delay, htime_delay, hloc_delay, width, courant, imp):
