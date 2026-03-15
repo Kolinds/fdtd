@@ -22,7 +22,6 @@ class HDF5Writer:
         self.ez_buffer= np.zeros((self.time_buffer, self.space_size))
         self.hy_buffer= np.zeros((self.time_buffer, self.space_size - 1))
 
-
     def update_file(self, actual_time, ez_array, hy_array):
         buffer_index = actual_time % self.time_buffer
         if (buffer_index == 0)  and (actual_time != 0):
@@ -36,8 +35,10 @@ class HDF5Writer:
         if self.file is None:
             print("Error: El archivo no está abierto.")
             return
+        
         group = self.file.require_group(location_group)
         group.create_dataset(dataset_name, data=array_data)
+
 
     def retrieve_array(self, location_group: str, dataset_name: str):
         if self.file is None:
