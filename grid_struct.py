@@ -65,7 +65,7 @@ class Grid():
         self.hy= np.zeros(self.space_size - 1)
 
     def update_Hyfield(self):
-        self.hy = upd.update_magnetic_field(self.hy, self.ez, self.chyh, self.chye, self.space_size - 1)
+        self.hy = upd.update_magnetic_field(self.hy, self.ez, self.chyh, self.chye, self.space_size)
 
     def update_Ezfield(self):
         self.ez = upd.update_electric_field(self.ez, self.hy, self.ceze, self.cezh, self.space_size)

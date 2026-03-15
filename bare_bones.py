@@ -9,18 +9,18 @@ hdf5_handler.open_file(cf.EDSET_NAME, cf.HDSET_NAME)
 
 grid = gr.Grid(cf.SPACE_SIZE, cf.TOTAL_TIME, cf.COURANT)
 grid.set_free_space()
+grid.initiate_abc()
 grid.add_probe(200, "Probe1", cf.TOTAL_TIME//2 + 1)
 
 
 for qTime in range (0, cf.TOTAL_TIME):
     grid.update_Hyfield()
     grid.apply_hyTFSF(incf.ricker, cf.TFSF_BOUNDARY, qTime, 50, 0, 0, cf.STEPS_WAVELENGTH, cf.RICKER_DELAY)
-    
-    grid.update_Ezfield()
-    grid.ez[0] = grid.ez[1]
-    grid.ez[cf.SPACE_SIZE - 1] = grid.ez[cf.SPACE_SIZE - 2]
     grid.apply_ezTFSF(incf.ricker, cf.TFSF_BOUNDARY, qTime, 50, 0.5, -0.5, cf.STEPS_WAVELENGTH, cf.RICKER_DELAY)
 
+    grid.update_Ezfield()
+    grid.update_abc_1order()
+    
 
     grid.r_DFT(qTime)
 
