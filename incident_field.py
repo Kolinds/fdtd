@@ -4,11 +4,11 @@ from numba import njit
 
 #Incident fields and wavelets
 @njit
-def ezfield(current_time, location, time_delay, loc_delay, width, courant):
+def ezfield(current_time, location, time_delay, loc_delay, courant, width):
     return np.exp((-(current_time + time_delay - (location + loc_delay) / courant)**2)/width)
 
 @njit
-def rampf(current_time, location, time_delay, loc_delay, steps_wavelength, ramp_periods, courant):
+def rampf(current_time, location, time_delay, loc_delay, courant, steps_wavelength, ramp_periods):
     ramp_duration = (steps_wavelength * ramp_periods)/(2*courant)
     phase_ramp = (1/ramp_duration)*np.pi*(current_time + time_delay)
     phase_cos = (1/ramp_duration)*np.pi*ramp_periods*((current_time + time_delay) - (location + loc_delay))
@@ -20,7 +20,7 @@ def rampf(current_time, location, time_delay, loc_delay, steps_wavelength, ramp_
         return np.cos(phase_cos)
 
 @njit
-def ricker(current_time, location, time_delay, loc_delay, steps_pkwavelength, delay_multiple, courant):
+def ricker(current_time, location, time_delay, loc_delay, courant, steps_pkwavelength, delay_multiple):
     exponent = ((np.pi)*((courant*(current_time + time_delay) - (location + loc_delay))/steps_pkwavelength - delay_multiple))**2
     return (1-2*exponent)*np.exp(-exponent)
 

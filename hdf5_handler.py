@@ -13,6 +13,7 @@ class HDF5Writer:
         self.ez_buffer= None
         self.hy_buffer= None
 
+
     def open_file(self, edset_name, hdset_name):
         #Open file and initialize datasets and buffers, for E, H-fields
         self.file = h5py.File(self.file_name, "w")
@@ -22,7 +23,9 @@ class HDF5Writer:
         self.ez_buffer= np.zeros((self.time_buffer, self.space_size))
         self.hy_buffer= np.zeros((self.time_buffer, self.space_size - 1))
 
+
     def update_file(self, actual_time, ez_array, hy_array):
+        self.actual_time = actual_time
         buffer_index = actual_time % self.time_buffer
         if (buffer_index == 0)  and (actual_time != 0):
             self.ez_dset[actual_time - self.time_buffer:actual_time, 0:self.space_size] = self.ez_buffer
@@ -30,6 +33,7 @@ class HDF5Writer:
 
         self.ez_buffer[buffer_index, :] = ez_array
         self.hy_buffer[buffer_index, :] = hy_array
+
 
     def save_array(self, location_group, dataset_name, array_data):
         if self.file is None:
@@ -56,6 +60,11 @@ class HDF5Writer:
 
     def close_file(self):
         if self.file is not None:
+            """            
+            buffer_index = self.actual_time % self.time_buffer
+                        self.ez_dset[self.actual_time - buffer_index:self.actual_time, 0:self.space_size] = self.ez_buffer
+                        self.hy_dset[self.actual_time - buffer_index:self.actual_time, 0:self.space_size - 1] = self.hy_buffer
+            """
             self.file.close()
 
 
