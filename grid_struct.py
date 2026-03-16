@@ -79,16 +79,8 @@ class Grid():
         self.abc.first_order()
 
     def update_abc_2order(self):
-        pass
+        self.abc.second_order()
 
-    """
-        ABC's in 1D with Courant Limit 
-        self.ez[0] = self.ez[1]
-
-        Absorbing boundary condition (ABC), deprecated. 
-        hy[SPACE_SIZE-1] = hy[SPACE_SIZE-2]
-        ez[SPACE_SIZE-1] = ez[SPACE_SIZE-2] This ABC does not work inside dielectric
-    """
     
 
     def apply_hyTFSF(self, inc_func, tfsf_boundary, current_time, location, time_delay, loc_delay, *func_args):        
@@ -97,11 +89,6 @@ class Grid():
     def apply_ezTFSF(self, inc_func, tfsf_boundary, current_time, location, time_delay, loc_delay, *func_args):
         self.ez[tfsf_boundary] += inc_func(current_time, location, time_delay, loc_delay, self.courant, *func_args)
 
-    """ 
-    Only equal: = -> Hardwired source
-    Summed: += -> Source 
-    ez[50] += np.exp((-(30 - 30)**2)/100)
-    """
 
     #Running discrete Fourier Transform
     def r_DFT(self, current_time):
@@ -136,19 +123,58 @@ class Abc_conditions():
     def __init__(self, grid: Grid):
         self.grid = grid
 
-        self.ezLeftOld = self.grid.ez[1]
-        self.ezRightOld = self.grid.ez[self.grid.space_size - 2]
+        #First Order Initial Conditions
+        self.abc1ezLeftOld = 0
+        self.abc1ezRightOld = 0
 
         temp1 = np.sqrt(self.grid.cezh[0] * self.grid.chye[0])
-        self.abcCoefLeft = (temp1 - 1.0) / (temp1 + 1.0)
+        self.abc1CoefLeft = (temp1 - 1.0) / (temp1 + 1.0)
         temp2 = np.sqrt(self.grid.cezh[self.grid.space_size - 1] * self.grid.chye[self.grid.space_size - 2])
-        self.abcCoefRight = (temp2 - 1.0) / (temp2 + 1.0)
+        self.abc1CoefRight = (temp2 - 1.0) / (temp2 + 1.0)
+
+
+        #Second Order Initial Conditions
+        self.abc2CoefLeft = np.zeros(3)
+        self.abc2CoefRight = np.zeros(3)
+        temp3 = 1.0 / temp1 + 2.0 + temp1
+
+        self.abc2CoefLeft[0] = -(1.0 / temp1 - 2.0 + temp1) / temp3
+        self.abc2CoefLeft[1] = -2.0 * (temp1 - 1.0 / temp1) / temp3
+        self.abc2CoefLeft[2] = 4.0 * (temp1 + 1.0 / temp1) / temp3
+
+        self.abc2CoefRight[0] = -(1.0 / temp2 - 2.0 + temp2) / temp3
+        self.abc2CoefRight[1] = -2.0 * (temp2 - 1.0 / temp2) / temp3
+        self.abc2CoefRight[2] = 4.0 * (temp2 + 1.0 / temp2) / temp3
+
+        self.abc2ezOld2Left = np.zeros(3)
+        self.abc2ezOld1Left = np.zeros(3)
+        self.abc2ezOld2Right = np.zeros(3)
+        self.abc2ezOld1Right = np.zeros(3)
+
 
     def first_order(self):
-        self.grid.ez[0] = self.ezLeftOld + self.abcCoefLeft * (self.grid.ez[1] - self.grid.ez[0]) #El ez[0] aun no se ha actualizado
-        self.ezLeftOld = self.grid.ez[1]
+        self.grid.ez[0] = self.abc1ezLeftOld + self.abc1CoefLeft * (self.grid.ez[1] - self.grid.ez[0]) #El ez[0] aun no se ha actualizado
+        self.grid.ez[self.grid.space_size - 1] = self.abc1ezRightOld + self.abc1CoefRight * (self.grid.ez[self.grid.space_size - 2] - self.grid.ez[self.grid.space_size - 1]) #El ez[0] aun no se ha actualizado
+        
+        self.abc1ezLeftOld = self.grid.ez[1]
+        self.abc1ezRightOld = self.grid.ez[self.grid.space_size - 2]
 
-        self.grid.ez[self.grid.space_size - 1] = self.ezRightOld + self.abcCoefRight * (self.grid.ez[self.grid.space_size - 2] - self.grid.ez[self.grid.space_size - 1]) #El ez[0] aun no se ha actualizado
-        self.ezRightOld = self.grid.ez[self.grid.space_size - 2]
+
+    def second_order(self):
+        self.grid.ez[0] = (self.abc2CoefLeft[0] * (self.grid.ez[2] + self.abc2ezOld2Left[0]) 
+                          +self.abc2CoefLeft[1] * (self.abc2ezOld1Left[0] + self.abc2ezOld1Left[2] - self.grid.ez[1] -self.abc2ezOld2Left[1])
+                          +self.abc2CoefLeft[2] * (self.abc2ezOld1Left[1]) - self.abc2ezOld2Left[2])
+
+        self.grid.ez[self.grid.space_size - 1] = (self.abc2CoefRight[0] * (self.grid.ez[self.grid.space_size - 3] + self.abc2ezOld2Right[0]) 
+                                                +self.abc2CoefRight[1] * (self.abc2ezOld1Right[0] + self.abc2ezOld1Right[2] - self.grid.ez[self.grid.space_size - 2] -self.abc2ezOld2Right[1])
+                                                +self.abc2CoefRight[2] * (self.abc2ezOld1Right[1]) - self.abc2ezOld2Right[2])
+
+        for m in range(0, 3):
+            self.abc2ezOld2Left[m] = self.abc2ezOld1Left[m]
+            self.abc2ezOld1Left[m] = self.grid.ez[m]
+
+            self.abc2ezOld2Right[m] = self.abc2ezOld1Right[m]
+            self.abc2ezOld1Right[m] = self.grid.ez[self.grid.space_size - 1 - m]
+
 
 

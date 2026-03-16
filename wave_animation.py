@@ -27,12 +27,12 @@ with h5py.File(cf.FILE_NAME, "r") as f:
         all_data = f[cf.EDSET_NAME][:cf.TOTAL_TIME, :cf.SPACE_SIZE]
 
 def anime_func(frame):
-    frame = frame * 10
+    frame = frame * 1
     present_data = all_data[frame, :]
     wave_line.set_ydata(present_data)
     time_text.set_text(f'Frame: {frame}')
     return wave_line, time_text
 
-ani = animation.FuncAnimation(fig=fig, func=anime_func, frames=cf.TOTAL_TIME//10, interval = 20)
+ani = animation.FuncAnimation(fig=fig, func=anime_func, frames=cf.TOTAL_TIME//1, interval = 20)
 
 plt.show()

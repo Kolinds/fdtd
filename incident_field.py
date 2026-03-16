@@ -71,6 +71,13 @@ hdf5_handler.save_array("Coef/", "transmission", trasmission_coef)
 
 """
 
+
+""" 
+    Only equal: = -> Hardwired source
+    Summed: += -> Source 
+    ez[50] += np.exp((-(30 - 30)**2)/100)
+"""
+
     
 
 
