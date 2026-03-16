@@ -8,7 +8,7 @@ hdf5_handler = h5h.HDF5Writer(cf.FILE_NAME, cf.TIME_BUFFER, cf.TOTAL_TIME, cf.SP
 hdf5_handler.open_file(cf.EDSET_NAME, cf.HDSET_NAME)
 
 grid = gr.Grid(cf.SPACE_SIZE, cf.TOTAL_TIME, cf.COURANT)
-grid.place_materials(cf.DIELECTRIC_LAYER, cf.LOSS, cf.LOSS_LAYER)
+grid.set_dielectric(cf.DIELECTRIC_LAYER)
 grid.initiate_abc()
 #grid.add_probe(200, "Probe1", cf.TOTAL_TIME//2 + 1)
 

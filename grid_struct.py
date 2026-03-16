@@ -35,6 +35,21 @@ class Grid():
         for m in range(0, self.space_size): 
                 self.ceze[m] = 1.0
                 self.cezh[m] = self.imp0    
+
+    def set_dielectric(self, dielectric_layer):
+        #Magnetic field material properties
+        for m in range(0, self.space_size - 1):
+                self.chyh[m] = 1.0
+                self.chye[m] = 1 / self.imp0
+
+        for m in range(0, self.space_size):
+            if (m < dielectric_layer): #Free space
+                self.ceze[m] = 1.0
+                self.cezh[m] = self.imp0
+
+            else: #Dielectric
+                self.ceze[m] = 1.0
+                self.cezh[m] = self.imp0 / 9.0    
     
     def place_materials(self, dielectric_layer, loss, loss_layer):
         #Magnetic field material properties
@@ -137,14 +152,15 @@ class Abc_conditions():
         self.abc2CoefLeft = np.zeros(3)
         self.abc2CoefRight = np.zeros(3)
         temp3 = 1.0 / temp1 + 2.0 + temp1
+        temp4 = 1.0 / temp2 + 2.0 + temp2
 
         self.abc2CoefLeft[0] = -(1.0 / temp1 - 2.0 + temp1) / temp3
         self.abc2CoefLeft[1] = -2.0 * (temp1 - 1.0 / temp1) / temp3
         self.abc2CoefLeft[2] = 4.0 * (temp1 + 1.0 / temp1) / temp3
 
-        self.abc2CoefRight[0] = -(1.0 / temp2 - 2.0 + temp2) / temp3
-        self.abc2CoefRight[1] = -2.0 * (temp2 - 1.0 / temp2) / temp3
-        self.abc2CoefRight[2] = 4.0 * (temp2 + 1.0 / temp2) / temp3
+        self.abc2CoefRight[0] = -(1.0 / temp2 - 2.0 + temp2) / temp4
+        self.abc2CoefRight[1] = -2.0 * (temp2 - 1.0 / temp2) / temp4
+        self.abc2CoefRight[2] = 4.0 * (temp2 + 1.0 / temp2) / temp4
 
         self.abc2ezOld2Left = np.zeros(3)
         self.abc2ezOld1Left = np.zeros(3)
