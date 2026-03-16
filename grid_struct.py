@@ -1,6 +1,7 @@
 import numpy as np
 import h5py
 import maxwell_update as upd
+import incident_field as incf
 
 
 
@@ -23,56 +24,6 @@ class Grid():
 
         #List for storing probing arrays
         self.stored_probes = []
-    
-        
-    def set_free_space(self):
-        #Magnetic field material properties
-        for m in range(0, self.space_size - 1):
-                self.chyh[m] = 1.0
-                self.chye[m] = 1 / self.imp0
-
-        #Electric field material properties
-        for m in range(0, self.space_size): 
-                self.ceze[m] = 1.0
-                self.cezh[m] = self.imp0    
-
-    def set_dielectric(self, dielectric_layer):
-        #Magnetic field material properties
-        for m in range(0, self.space_size - 1):
-                self.chyh[m] = 1.0
-                self.chye[m] = 1 / self.imp0
-
-        for m in range(0, self.space_size):
-            if (m < dielectric_layer): #Free space
-                self.ceze[m] = 1.0
-                self.cezh[m] = self.imp0
-
-            else: #Dielectric
-                self.ceze[m] = 1.0
-                self.cezh[m] = self.imp0 / 9.0    
-    
-    def place_materials(self, dielectric_layer, loss, loss_layer):
-        #Magnetic field material properties
-        for m in range(0, self.space_size - 1):
-            if (m < loss_layer): #Free space
-                self.chyh[m] = 1.0
-                self.chye[m] = 1 / self.imp0
-            else:
-                self.chyh[m] = (1.0 - loss) / (1.0 + loss)
-                self.chye[m] = (1.0 / self.imp0) / (1.0 + loss)
-
-        #Electric field material properties
-        for m in range(0, self.space_size):
-            if (m < dielectric_layer): #Free space
-                self.ceze[m] = 1.0
-                self.cezh[m] = self.imp0
-            elif (m < loss_layer): #Dielectric
-                self.ceze[m] = 1.0
-                self.cezh[m] = self.imp0 / 9.0
-            else: #lossy Boundary layer
-                self.ceze[m] = (1.0 - loss) / (1.0 + loss)
-                self.cezh[m] = (self.imp0 / 9.0) / (1.0 + loss)
-
 
 
     def reset_fields(self):
@@ -86,17 +37,12 @@ class Grid():
         self.ez = upd.update_electric_field(self.ez, self.hy, self.ceze, self.cezh, self.space_size)
 
 
+    def initiate_materials(self):
+        self.materials = Material_placement(self)
+
 
     def initiate_abc(self):
         self.abc = Abc_conditions(self)
-    
-    def update_abc_1order(self):
-        self.abc.first_order()
-
-    def update_abc_2order(self):
-        self.abc.second_order()
-
-    
 
     def apply_hyTFSF(self, inc_func, tfsf_boundary, current_time, location, time_delay, loc_delay, *func_args):        
         self.hy[tfsf_boundary - 1] -= inc_func(current_time, location, time_delay, loc_delay, self.courant, *func_args) / self.imp0
@@ -108,6 +54,9 @@ class Grid():
     #Running discrete Fourier Transform
     def r_DFT(self, current_time):
         for actual_probe in self.stored_probes:
+            """
+            incf.running_DFT(actual_probe["array"], actual_probe["location"], self.ez, self.total_time, current_time)
+            """
             freq_array = np.arange(actual_probe["size"])
             angles_array = (2*np.pi * freq_array * current_time)/self.total_time
             actual_probe["array"].real += self.ez[actual_probe["location"]]*np.cos(angles_array)
@@ -129,6 +78,63 @@ class Grid():
             group = file.require_group("/Probes/")
             group.create_dataset(actual_probe["name"], data=(1/self.space_size)*actual_probe["array"])
         self.stored_probes.clear()
+
+
+
+class Material_placement():
+    def __init__(self, grid: Grid):
+        self.grid = grid
+        self.set_free_space()
+
+
+    def set_free_space(self):
+        #Magnetic field material properties
+        for m in range(0, self.grid.space_size - 1):
+                self.grid.chyh[m] = 1.0
+                self.grid.chye[m] = 1 / self.grid.imp0
+
+        #Electric field material properties
+        for m in range(0, self.grid.space_size): 
+                self.grid.ceze[m] = 1.0
+                self.grid.cezh[m] = self.grid.imp0    
+
+    def set_dielectric(self, dielectric_layer):
+        #Magnetic field material properties
+        for m in range(0, self.grid.space_size - 1):
+                self.grid.chyh[m] = 1.0
+                self.grid.chye[m] = 1 / self.grid.imp0
+
+        for m in range(0, self.grid.space_size):
+            if (m < dielectric_layer): #Free space
+                self.grid.ceze[m] = 1.0
+                self.grid.cezh[m] = self.grid.imp0
+
+            else: #Dielectric
+                self.grid.ceze[m] = 1.0
+                self.grid.cezh[m] = self.grid.imp0 / 9.0    
+    
+    def set_lossy_material(self, dielectric_layer, loss, loss_layer):
+        #Magnetic field material properties
+        for m in range(0, self.grid.space_size - 1):
+            if (m < loss_layer): #Free space
+                self.grid.chyh[m] = 1.0
+                self.grid.chye[m] = 1 / self.grid.imp0
+            else:
+                self.grid.chyh[m] = (1.0 - loss) / (1.0 + loss)
+                self.grid.chye[m] = (1.0 / self.grid.imp0) / (1.0 + loss)
+
+        #Electric field material properties
+        for m in range(0, self.grid.space_size):
+            if (m < dielectric_layer): #Free space
+                self.grid.ceze[m] = 1.0
+                self.grid.cezh[m] = self.grid.imp0
+            elif (m < loss_layer): #Dielectric
+                self.grid.ceze[m] = 1.0
+                self.grid.cezh[m] = self.grid.imp0 / 9.0
+            else: #lossy Boundary layer
+                self.grid.ceze[m] = (1.0 - loss) / (1.0 + loss)
+                self.grid.cezh[m] = (self.grid.imp0 / 9.0) / (1.0 + loss)
+
 
 
 

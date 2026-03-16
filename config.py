@@ -14,9 +14,9 @@ LOSS_LAYER = 300
 LOSS = 0.02
 
 # Simulation Grid & Time
-SPACE_SIZE = 250
-TOTAL_TIME = 1000
-COURANT = 0.90
+SPACE_SIZE = 2500
+TOTAL_TIME = 40000
+COURANT = 1
 TFSF_BOUNDARY = 75
 
 #Incident fields and wavelets

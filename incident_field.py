@@ -4,7 +4,7 @@ from numba import njit
 
 #Incident fields and wavelets
 @njit
-def ezfield(current_time, location, time_delay, loc_delay, courant, width):
+def gaussian(current_time, location, time_delay, loc_delay, courant, width):
     return np.exp((-(current_time + time_delay - (location + loc_delay) / courant)**2)/width)
 
 @njit
@@ -36,6 +36,7 @@ def transmission_c(location, incidident_f, transmitted_f, total_freq, total_time
         transm_array[n_freq] = np.exp(1j * 4 * np.pi * location * n_freq / total_time) * (transmitted_f[n_freq] / incidident_f[n_freq])
     
     return transm_array
+
 
 
 
