@@ -51,25 +51,21 @@ class Grid():
 
     def update_Hyfield(self):
         initial_step = 0
-        for action, number_steps, arguments in self.materials.hy_action_sequences:
+        for action, final_step, arguments in self.materials.hy_action_sequences:
             field_updf = self.materials.function_map[action]
-
-            for m in range(initial_step, initial_step + number_steps):
-                field_updf(m, self.hy, self.ez, **arguments)
+            field_updf(initial_step, final_step, self.hy, self.ez, **arguments)
                 #miauuuu :3
-            
-            initial_step += number_steps
+            initial_step = final_step
             
     def update_Ezfield(self):
         initial_step = 0
-        for action, number_steps, arguments in self.materials.ez_action_sequences:
+        for action, final_step, arguments in self.materials.ez_action_sequences:
             field_updf = self.materials.function_map[action]
-
-            for m in range(initial_step, initial_step + number_steps):
-                field_updf(m, self.hy, self.ez, **arguments)
+            field_updf(initial_step, final_step, self.hy, self.ez, **arguments)
                 #miauuuu :3
+            initial_step = final_step
             
-            initial_step += number_steps
+  
 
 
     #Running discrete Fourier Transform
