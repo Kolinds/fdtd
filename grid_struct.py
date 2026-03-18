@@ -112,11 +112,15 @@ class Material_placement():
 
 
     def set_dinamic_free(self):
+        self.hy_action_sequences.clear()
+        self.ez_action_sequences.clear()
+        #Magnetic material
         chyh = 1.0
         chye = 1 / self.grid.imp0
         dictionary = {"chyh": chyh, "chye": chye}
         self.hy_action_sequences.append(("hy_basic", self.grid.space_size - 1, dictionary))
 
+        #Electric material
         ceze = 1.0
         cezh = self.grid.imp0 
         dictionary = {"ceze": ceze, "cezh": cezh} 
@@ -131,7 +135,7 @@ class Material_placement():
         dictionary = {"chyh": chyh, "chye": chye}
         self.hy_action_sequences.append(("hy_basic", self.grid.space_size - 1, dictionary))
 
-        #Dielectric material
+        #Electric material
         ceze = 1.0
         cezh = self.grid.imp0 
         dictionary = {"ceze": ceze, "cezh": cezh}
@@ -141,55 +145,39 @@ class Material_placement():
         cezh = self.grid.imp0 / 9.0  
         dictionary = {"ceze": ceze, "cezh": cezh}
         self.ez_action_sequences.append(("ez_basic", self.grid.space_size - 1, dictionary))
-
-
-    def set_free_space(self):
-        #Magnetic field material properties
-        for m in range(0, self.grid.space_size - 1):
-                self.grid.chyh[m] = 1.0
-                self.grid.chye[m] = 1 / self.grid.imp0
-
-        #Electric field material properties
-        for m in range(0, self.grid.space_size): 
-                self.grid.ceze[m] = 1.0
-                self.grid.cezh[m] = self.grid.imp0    
-
-    def set_dielectric(self, dielectric_layer):
-        #Magnetic field material properties
-        for m in range(0, self.grid.space_size - 1):
-                self.grid.chyh[m] = 1.0
-                self.grid.chye[m] = 1 / self.grid.imp0
-
-        for m in range(0, self.grid.space_size):
-            if (m < dielectric_layer): #Free space
-                self.grid.ceze[m] = 1.0
-                self.grid.cezh[m] = self.grid.imp0
-
-            else: #Dielectric
-                self.grid.ceze[m] = 1.0
-                self.grid.cezh[m] = self.grid.imp0 / 9.0    
     
     def set_lossy_material(self, dielectric_layer, loss, loss_layer):
-        #Magnetic field material properties
-        for m in range(0, self.grid.space_size - 1):
-            if (m < loss_layer): #Free space
-                self.grid.chyh[m] = 1.0
-                self.grid.chye[m] = 1 / self.grid.imp0
-            else:
-                self.grid.chyh[m] = (1.0 - loss) / (1.0 + loss)
-                self.grid.chye[m] = (1.0 / self.grid.imp0) / (1.0 + loss)
+        self.hy_action_sequences.clear()
+        self.ez_action_sequences.clear()
+        #Magnetic material
+        chyh = 1.0
+        chye = 1 / self.grid.imp0
+        dictionary = {"chyh": chyh, "chye": chye}
+        self.hy_action_sequences.append(("hy_basic", loss_layer, dictionary))
+
+        chyh = (1.0 - loss) / (1.0 + loss)
+        chye = (1.0 / self.grid.imp0) / (1.0 + loss)
+        dictionary = {"chyh": chyh, "chye": chye}
+        self.hy_action_sequences.append(("hy_basic", self.grid.space_size - 1, dictionary))
+
 
         #Electric field material properties
-        for m in range(0, self.grid.space_size):
-            if (m < dielectric_layer): #Free space
-                self.grid.ceze[m] = 1.0
-                self.grid.cezh[m] = self.grid.imp0
-            elif (m < loss_layer): #Dielectric
-                self.grid.ceze[m] = 1.0
-                self.grid.cezh[m] = self.grid.imp0 / 9.0
-            else: #lossy Boundary layer
-                self.grid.ceze[m] = (1.0 - loss) / (1.0 + loss)
-                self.grid.cezh[m] = (self.grid.imp0 / 9.0) / (1.0 + loss)
+        ceze = 1.0
+        cezh = self.grid.imp0 
+        dictionary = {"ceze": ceze, "cezh": cezh}
+        self.ez_action_sequences.append(("ez_basic", dielectric_layer, dictionary))
+
+        ceze = 1.0
+        cezh = self.grid.imp0 / 9.0  
+        dictionary = {"ceze": ceze, "cezh": cezh}
+        self.ez_action_sequences.append(("ez_basic", loss_layer, dictionary))
+    
+        ceze = (1.0 - loss) / (1.0 + loss)
+        cezh = (self.grid.imp0 / 9.0) / (1.0 + loss)
+        dictionary = {"ceze": ceze, "cezh": cezh}
+        self.ez_action_sequences.append(("ez_basic", self.grid.space_size - 1, dictionary))
+    
+
 
 
 

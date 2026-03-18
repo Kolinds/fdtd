@@ -10,7 +10,7 @@ BUFFER_JUMP = 100
 # Physical & Material Parameters
 IMP0 = 337.0
 DIELECTRIC_LAYER = 100
-LOSS_LAYER = 300
+LOSS_LAYER = 150
 LOSS = 0.02
 
 # Simulation Grid & Time
