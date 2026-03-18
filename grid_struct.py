@@ -16,26 +16,16 @@ class Grid():
         self.ez= np.zeros(space_size)
         self.hy= np.zeros(space_size - 1)
 
-        #Arrays for permitivity, permeability and loss of materials
+        """        #Arrays for permitivity, permeability and loss of materials
         self.ceze = np.ones(space_size)
         self.cezh = np.ones(space_size)
         self.chyh = np.ones(space_size - 1)
         self.chye = np.ones(space_size - 1)
+        """
 
         #List for storing probing arrays
         self.stored_probes = []
-
-
-    def reset_fields(self):
-        self.ez= np.zeros(self.space_size)
-        self.hy= np.zeros(self.space_size - 1)
-
-    def update_Hyfield(self):
-        self.hy = upd.update_magnetic_field(self.hy, self.ez, self.chyh, self.chye, self.space_size)
-
-    def update_Ezfield(self):
-        self.ez = upd.update_electric_field(self.ez, self.hy, self.ceze, self.cezh, self.space_size)
-
+    
 
     def initiate_materials(self):
         self.materials = Material_placement(self)
@@ -44,11 +34,42 @@ class Grid():
     def initiate_abc(self):
         self.abc = Abc_conditions(self)
 
+
     def apply_hyTFSF(self, inc_func, tfsf_boundary, current_time, location, time_delay, loc_delay, *func_args):        
         self.hy[tfsf_boundary - 1] -= inc_func(current_time, location, time_delay, loc_delay, self.courant, *func_args) / self.imp0
 
     def apply_ezTFSF(self, inc_func, tfsf_boundary, current_time, location, time_delay, loc_delay, *func_args):
         self.ez[tfsf_boundary] += inc_func(current_time, location, time_delay, loc_delay, self.courant, *func_args)
+
+
+
+
+    def reset_fields(self):
+        self.ez= np.zeros(self.space_size)
+        self.hy= np.zeros(self.space_size - 1)
+
+
+    def update_Hyfield(self):
+        initial_step = 0
+        for action, number_steps, arguments in self.materials.hy_action_sequences:
+            field_updf = self.materials.function_map[action]
+
+            for m in range(initial_step, initial_step + number_steps):
+                field_updf(m, self.hy, self.ez, **arguments)
+                #miauuuu :3
+            
+            initial_step += number_steps
+            
+    def update_Ezfield(self):
+        initial_step = 0
+        for action, number_steps, arguments in self.materials.ez_action_sequences:
+            field_updf = self.materials.function_map[action]
+
+            for m in range(initial_step, initial_step + number_steps):
+                field_updf(m, self.hy, self.ez, **arguments)
+                #miauuuu :3
+            
+            initial_step += number_steps
 
 
     #Running discrete Fourier Transform
@@ -84,7 +105,26 @@ class Grid():
 class Material_placement():
     def __init__(self, grid: Grid):
         self.grid = grid
-        self.set_free_space()
+
+        self.function_map = {"ez_basic": upd.update_elec_field, 
+                        "hy_basic": upd.update_mag_field}
+        
+        self.hy_action_sequences=[]
+        self.ez_action_sequences=[]
+        self.set_dinamic_free()
+
+
+
+    def set_dinamic_free(self):
+        chyh = 1.0
+        chye = 1 / self.grid.imp0
+        dictionary = {"chyh": chyh, "chye": chye}
+        self.hy_action_sequences.append(("hy_basic", self.grid.space_size - 1, dictionary))
+
+        ceze = 1.0
+        cezh = self.grid.imp0 
+        dictionary = {"ceze": ceze, "cezh": cezh} 
+        self.ez_action_sequences.append(("ez_basic", self.grid.space_size - 1, dictionary))
 
 
     def set_free_space(self):
@@ -148,9 +188,14 @@ class Abc_conditions():
         self.abc1ezLeftOld = 0
         self.abc1ezRightOld = 0
 
-        temp1 = np.sqrt(self.grid.cezh[0] * self.grid.chye[0])
+        cezh_first = self.grid.materials.ez_action_sequences[0][2]["cezh"]
+        cezh_last = self.grid.materials.ez_action_sequences[-1][2]["cezh"]
+        chye_first = self.grid.materials.hy_action_sequences[0][2]["chye"]
+        chye_last = self.grid.materials.hy_action_sequences[-1][2]["chye"]
+
+        temp1 = np.sqrt(cezh_first * chye_first)
         self.abc1CoefLeft = (temp1 - 1.0) / (temp1 + 1.0)
-        temp2 = np.sqrt(self.grid.cezh[self.grid.space_size - 1] * self.grid.chye[self.grid.space_size - 2])
+        temp2 = np.sqrt(cezh_last * chye_last)
         self.abc1CoefRight = (temp2 - 1.0) / (temp2 + 1.0)
 
 
