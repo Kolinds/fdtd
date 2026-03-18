@@ -10,7 +10,7 @@ hdf5_handler.open_file(cf.EDSET_NAME, cf.HDSET_NAME)
 grid = gr.Grid(cf.SPACE_SIZE, cf.TOTAL_TIME, cf.COURANT)
 grid.initiate_materials()
 grid.initiate_abc()
-
+grid.materials.set_dinamic_dielectric(cf.DIELECTRIC_LAYER)
 
 grid.add_probe(200, "Probe1", cf.TOTAL_TIME//2 + 1)
 
@@ -21,7 +21,7 @@ for qTime in range (0, cf.TOTAL_TIME):
 
     grid.update_Ezfield()
     grid.apply_ezTFSF(incf.gaussian, cf.TFSF_BOUNDARY, qTime, 50, 0.5, -0.5, 100)
-    grid.abc.first_order()
+    grid.abc.second_order()
     
 
     #grid.r_DFT(qTime)

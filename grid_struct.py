@@ -58,7 +58,7 @@ class Grid():
             initial_step = final_step
             
     def update_Ezfield(self):
-        initial_step = 0
+        initial_step = 1
         for action, final_step, arguments in self.materials.ez_action_sequences:
             field_updf = self.materials.function_map[action]
             field_updf(initial_step, final_step, self.hy, self.ez, **arguments)
@@ -120,6 +120,26 @@ class Material_placement():
         ceze = 1.0
         cezh = self.grid.imp0 
         dictionary = {"ceze": ceze, "cezh": cezh} 
+        self.ez_action_sequences.append(("ez_basic", self.grid.space_size - 1, dictionary))
+
+    def set_dinamic_dielectric(self, dielectric_layer):
+        self.hy_action_sequences.clear()
+        self.ez_action_sequences.clear()
+        #Magnetic material
+        chyh = 1.0
+        chye = 1 / self.grid.imp0
+        dictionary = {"chyh": chyh, "chye": chye}
+        self.hy_action_sequences.append(("hy_basic", self.grid.space_size - 1, dictionary))
+
+        #Dielectric material
+        ceze = 1.0
+        cezh = self.grid.imp0 
+        dictionary = {"ceze": ceze, "cezh": cezh}
+        self.ez_action_sequences.append(("ez_basic", dielectric_layer, dictionary))
+
+        ceze = 1.0
+        cezh = self.grid.imp0 / 9.0  
+        dictionary = {"ceze": ceze, "cezh": cezh}
         self.ez_action_sequences.append(("ez_basic", self.grid.space_size - 1, dictionary))
 
 
