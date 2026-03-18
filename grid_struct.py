@@ -205,8 +205,8 @@ class Abc_conditions():
         self.abc1ezRightOld = 0
 
         cezh_first = self.grid.materials.ez_action_sequences[0][2]["cezh"]
-        cezh_last = self.grid.materials.ez_action_sequences[-1][2]["cezh"]
         chye_first = self.grid.materials.hy_action_sequences[0][2]["chye"]
+        cezh_last = self.grid.materials.ez_action_sequences[-1][2]["cezh"]
         chye_last = self.grid.materials.hy_action_sequences[-1][2]["chye"]
 
         temp1 = np.sqrt(cezh_first * chye_first)

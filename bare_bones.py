@@ -9,8 +9,8 @@ hdf5_handler.open_file(cf.EDSET_NAME, cf.HDSET_NAME)
 
 grid = gr.Grid(cf.SPACE_SIZE, cf.TOTAL_TIME, cf.COURANT)
 grid.initiate_materials()
-grid.initiate_abc()
 grid.materials.set_dinamic_dielectric(cf.DIELECTRIC_LAYER)
+grid.initiate_abc()
 
 grid.add_probe(200, "Probe1", cf.TOTAL_TIME//2 + 1)
 
