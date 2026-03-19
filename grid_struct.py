@@ -10,7 +10,8 @@ class Grid():
         self.space_size = space_size
         self.total_time = total_time
         self.courant = courant
-        self.imp0 = 337.0
+        self.imp0 = 377.0
+        self.permitivity0 = 8.854e-12
 
         #Arrays for E, H-fields
         self.ez= np.zeros(space_size)
@@ -103,12 +104,12 @@ class Material_placement():
         self.grid = grid
 
         self.function_map = {"ez_basic": upd.update_elec_field, 
-                        "hy_basic": upd.update_mag_field}
+                        "hy_basic": upd.update_mag_field,
+                        "ez_dispersive": upd.update_disp_elec}
         
         self.hy_action_sequences=[]
         self.ez_action_sequences=[]
         self.set_dinamic_free()
-
 
 
     def set_dinamic_free(self):
@@ -160,7 +161,6 @@ class Material_placement():
         dictionary = {"chyh": chyh, "chye": chye}
         self.hy_action_sequences.append(("hy_basic", self.grid.space_size - 1, dictionary))
 
-
         #Electric field material properties
         ceze = 1.0
         cezh = self.grid.imp0 
@@ -177,8 +177,46 @@ class Material_placement():
         dictionary = {"ceze": ceze, "cezh": cezh}
         self.ez_action_sequences.append(("ez_basic", self.grid.space_size - 1, dictionary))
     
+    def set_plasma_slab(self, start_layer, end_layer, delta_t, conductivity, relax_time, plasma_wavelength, permitivity_inf):
+        self.hy_action_sequences=[]
+        self.ez_action_sequences=[]
+        #Magnetic material
+        chyh = 1.0
+        chye = 1 / self.grid.imp0
+        dictionary = {"chyh": chyh, "chye": chye}
+        self.hy_action_sequences.append(("hy_basic", self.grid.space_size - 1, dictionary))
 
+        #Electric field material properties
+        #-> Free space
+        ceze = 1.0
+        cezh = self.grid.imp0 
+        dictionary = {"ceze": ceze, "cezh": cezh}
+        self.ez_action_sequences.append(("ez_basic", start_layer, dictionary))
 
+        #-> Plasma slab
+        ez_temp = np.zeros(self.grid.space_size)
+        pol_current = np.zeros(self.grid.space_size)
+
+        coef_jj = (1 - 1/(2*relax_time)) / (1 + 1/(2*relax_time))
+        coef_je = (1 / (1 + 1/(2*relax_time))) * ((2 * (np.pi)**2 *self.grid.courant) / (self.grid.imp0 * plasma_wavelength**2))
+
+        c_1 = (conductivity * delta_t) / (2* permitivity_inf * self.grid.permitivity0)
+        c_2 = (coef_je * self.grid.imp0 * self.grid.courant) / (2 * permitivity_inf)
+
+        cpez_e = (1 - c_1 - c_2) / (1 + c_1 + c_2)
+        cpez_fp = ((self.grid.imp0 * self.grid.courant) / permitivity_inf) / (1 + c_1 + c_2)
+        cpez_dp = 0.5 * (1 + coef_jj)
+
+        dictionary = {"ez_temp": ez_temp, "pol_current": pol_current, "coef_jj": coef_jj, "coef_je":coef_je,
+                       "cpez_e": cpez_e, "cpez_fp": cpez_fp, "cpez_dp":cpez_dp}
+
+        self.ez_action_sequences.append(("ez_dispersive", end_layer, dictionary))
+
+        #-> Free space
+        ceze = 1.0
+        cezh = self.grid.imp0 
+        dictionary = {"ceze": ceze, "cezh": cezh} 
+        self.ez_action_sequences.append(("ez_basic", self.grid.space_size - 1, dictionary))
 
 
 

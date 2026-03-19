@@ -12,6 +12,11 @@ def update_elec_field(start, end, hy, ez, ceze, cezh):
             ez[m] = ceze * ez[m] + cezh * (hy[m] - hy[m - 1])
 
 
+def update_disp_elec(start, end, hy, ez, ez_temp, pol_current, coef_jj, coef_je, cpez_e, cpez_fp, cpez_dp):
+        for m in range(start, end):
+            ez_temp[m] = ez[m]
+            ez[m] = cpez_e * ez[m] + cpez_fp * ((hy[m] - hy[m - 1]) - cpez_dp * pol_current[m])
+            pol_current[m] = coef_jj * pol_current[m] + coef_je * (ez_temp[m] + ez[m])
 
 
 
