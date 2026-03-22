@@ -105,7 +105,8 @@ class Material_placement():
 
         self.function_map = {"ez_basic": upd.update_elec_field, 
                         "hy_basic": upd.update_mag_field,
-                        "ez_dispersive": upd.update_disp_elec}
+                        "ez_dispersive_ADE": upd.update_disp_elec_ADE,
+                        "ez_dispersive_PLRC": upd.update_disp_elec_PLRC}
         
         self.hy_action_sequences=[]
         self.ez_action_sequences=[]
@@ -177,7 +178,7 @@ class Material_placement():
         dictionary = {"ceze": ceze, "cezh": cezh}
         self.ez_action_sequences.append(("ez_basic", self.grid.space_size - 1, dictionary))
     
-    def set_plasma_slab(self, start_layer, end_layer, delta_t, conductivity, relax_time, plasma_wavelength, permitivity_inf):
+    def plasma_slab_ADE(self, start_layer, end_layer, delta_t, conductivity, relax_time, plasma_wavelength, permitivity_inf):
         self.hy_action_sequences=[]
         self.ez_action_sequences=[]
         #Magnetic material
@@ -210,7 +211,57 @@ class Material_placement():
         dictionary = {"ez_temp": ez_temp, "pol_current": pol_current, "coef_jj": coef_jj, "coef_je":coef_je,
                        "cpez_e": cpez_e, "cpez_fp": cpez_fp, "cpez_dp":cpez_dp}
 
-        self.ez_action_sequences.append(("ez_dispersive", end_layer, dictionary))
+        self.ez_action_sequences.append(("ez_dispersive_ADE", end_layer, dictionary))
+
+        #-> Free space
+        ceze = 1.0
+        cezh = self.grid.imp0 
+        dictionary = {"ceze": ceze, "cezh": cezh} 
+        self.ez_action_sequences.append(("ez_basic", self.grid.space_size - 1, dictionary))
+
+    def plasma_slab_PLRC(self, start_layer, end_layer, delta_t, conductivity, relax_time, plasma_wavelength, permitivity_inf):
+        self.hy_action_sequences=[]
+        self.ez_action_sequences=[]
+        #Magnetic material
+        chyh = 1.0
+        chye = 1 / self.grid.imp0
+        dictionary = {"chyh": chyh, "chye": chye}
+        self.hy_action_sequences.append(("hy_basic", self.grid.space_size - 1, dictionary))
+
+        #Electric field material properties
+        #-> Free space
+        ceze = 1.0
+        cezh = self.grid.imp0 
+        dictionary = {"ceze": ceze, "cezh": cezh}
+        self.ez_action_sequences.append(("ez_basic", start_layer, dictionary))
+
+        #-> Plasma slab
+        ez_temp = np.zeros(self.grid.space_size)
+        rec_accumulator = np.zeros(self.grid.space_size)
+
+        c_rec = np.exp(-1/relax_time)
+        common_factor = ((2 * np.pi * self.grid.courant)/(plasma_wavelength))**2
+
+        chi0 = relax_time * common_factor * (1 - relax_time * (1 -c_rec))
+        xi0 = relax_time * common_factor * (0.5 - relax_time**2 * (1 - (1 + 1/relax_time) * c_rec))
+        delta_chi0 = - relax_time**2 * common_factor * (1 - c_rec)**2
+        delta_xi0 = - relax_time**3 * common_factor * (1 - (1 + 1/relax_time)*c_rec)*(1 - c_rec)
+
+        denominator = permitivity_inf + chi0 - xi0
+
+        cez_ez = (permitivity_inf - xi0) / denominator
+        cez_hy = (self.grid.courant * self.grid.imp0) / denominator
+        cez_accum = 1 / denominator
+
+        caccum_ezf = delta_chi0 - delta_xi0
+        caccum_ezp = delta_xi0
+        caccum_accum = c_rec
+
+        dictionary = {"ez_temp": ez_temp, "rec_accumulator": rec_accumulator, 
+                      "cez_ez": cez_ez, "cez_hy":cez_hy, "cez_accum":cez_accum,
+                       "caccum_ezf": caccum_ezf, "caccum_ezp": caccum_ezp, "caccum_accum":caccum_accum}
+
+        self.ez_action_sequences.append(("ez_dispersive_PLRC", end_layer, dictionary))
 
         #-> Free space
         ceze = 1.0

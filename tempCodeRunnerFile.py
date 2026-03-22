@@ -1,1 +1,2 @@
-cf.STEPS_WAVELENGTH, cf.RICKER_DELAY
+
+space_array = np.linspa

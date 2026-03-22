@@ -11,12 +11,18 @@ def update_elec_field(start, end, hy, ez, ceze, cezh):
         for m in range(start, end):
             ez[m] = ceze * ez[m] + cezh * (hy[m] - hy[m - 1])
 
-
-def update_disp_elec(start, end, hy, ez, ez_temp, pol_current, coef_jj, coef_je, cpez_e, cpez_fp, cpez_dp):
+@njit
+def update_disp_elec_ADE(start, end, hy, ez, ez_temp, pol_current, coef_jj, coef_je, cpez_e, cpez_fp, cpez_dp):
         for m in range(start, end):
             ez_temp[m] = ez[m]
             ez[m] = cpez_e * ez[m] + cpez_fp * ((hy[m] - hy[m - 1]) - cpez_dp * pol_current[m])
             pol_current[m] = coef_jj * pol_current[m] + coef_je * (ez_temp[m] + ez[m])
+
+def update_disp_elec_PLRC(start, end, hy, ez, ez_temp, rec_accumulator, cez_ez, cez_hy, cez_accum, caccum_ezf, caccum_ezp, caccum_accum):
+        for m in range(start, end):
+            ez_temp[m] = ez[m]
+            ez[m] = cez_ez * ez[m] + cez_hy * (hy[m] - hy[m - 1]) + cez_accum * rec_accumulator[m]
+            rec_accumulator[m] = caccum_ezf * ez[m] + caccum_ezp * ez_temp[m] + caccum_accum * rec_accumulator[m]
 
 
 
