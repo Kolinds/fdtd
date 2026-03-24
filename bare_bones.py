@@ -9,7 +9,7 @@ hdf5_handler.open_file(cf.EDSET_NAME, cf.HDSET_NAME)
 
 grid = gr.Grid(cf.SPACE_SIZE, cf.TOTAL_TIME, cf.COURANT)
 grid.initiate_materials()
-grid.materials.plasma_slab_PLRC(200, 700, cf.DELTA_T, cf.CONDUCTIVITY, cf.RELAX_TIME_STEPS,
+grid.materials.plasma_slab_ztransf(200, 700, cf.DELTA_T, cf.CONDUCTIVITY, cf.RELAX_TIME_STEPS,
                                cf.PLASMA_WAVELENGTH_STEPS, cf.PERMITIVITY_INF)
 grid.initiate_abc()
 

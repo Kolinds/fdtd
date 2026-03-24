@@ -106,7 +106,8 @@ class Material_placement():
         self.function_map = {"ez_basic": upd.update_elec_field, 
                         "hy_basic": upd.update_mag_field,
                         "ez_dispersive_ADE": upd.update_disp_elec_ADE,
-                        "ez_dispersive_PLRC": upd.update_disp_elec_PLRC}
+                        "ez_dispersive_PLRC": upd.update_disp_elec_PLRC,
+                        "ez_dispersive_ztransf": upd.update_disp_elec_ztransf}
         
         self.hy_action_sequences=[]
         self.ez_action_sequences=[]
@@ -262,6 +263,48 @@ class Material_placement():
                        "caccum_ezf": caccum_ezf, "caccum_ezp": caccum_ezp, "caccum_accum":caccum_accum}
 
         self.ez_action_sequences.append(("ez_dispersive_PLRC", end_layer, dictionary))
+
+        #-> Free space
+        ceze = 1.0
+        cezh = self.grid.imp0 
+        dictionary = {"ceze": ceze, "cezh": cezh} 
+        self.ez_action_sequences.append(("ez_basic", self.grid.space_size - 1, dictionary))
+
+    def plasma_slab_ztransf(self, start_layer, end_layer, delta_t, conductivity, relax_time, plasma_wavelength, permitivity_inf):
+        self.hy_action_sequences=[]
+        self.ez_action_sequences=[]
+        #Magnetic material
+        chyh = 1.0
+        chye = 1 / self.grid.imp0
+        dictionary = {"chyh": chyh, "chye": chye}
+        self.hy_action_sequences.append(("hy_basic", self.grid.space_size - 1, dictionary))
+
+        #Electric field material properties
+        #-> Free space
+        ceze = 1.0
+        cezh = self.grid.imp0 
+        dictionary = {"ceze": ceze, "cezh": cezh}
+        self.ez_action_sequences.append(("ez_basic", start_layer, dictionary))
+
+        #-> Plasma slab
+        integrator = np.zeros(self.grid.space_size)
+        low_pass = np.zeros(self.grid.space_size)
+        d_field = np.zeros(self.grid.space_size)
+
+        cezd = (1 / permitivity_inf)
+        cezi = ((2 * np.pi * self.grid.courant)/(plasma_wavelength))**2 * (1/permitivity_inf) * relax_time
+        cezl = - cezi * np.exp(-1/relax_time)
+
+        clows = np.exp(-1/relax_time)
+        
+
+
+     
+        dictionary = {"d_field": d_field, "integrator": integrator,  "low_pass": low_pass,
+                     "cezd":cezd, "cezi":cezi, "cezl": cezl, "clows": clows, 
+                     "imp0": self.grid.imp0, "courant": self.grid.courant}
+
+        self.ez_action_sequences.append(("ez_dispersive_ztransf", end_layer, dictionary))
 
         #-> Free space
         ceze = 1.0
