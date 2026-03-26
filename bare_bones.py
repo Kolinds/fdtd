@@ -4,17 +4,24 @@ import config as cf
 import incident_field as incf
 
 
-hdf5_handler = h5h.HDF5Writer(cf.FILE_NAME, cf.TIME_BUFFER, cf.TOTAL_TIME, cf.SPACE_SIZE)
-hdf5_handler.open_file(cf.EDSET_NAME, cf.HDSET_NAME)
+grid = gr.Grid(cf.TOTAL_TIME, cf.COURANT)
 
-grid = gr.Grid(cf.SPACE_SIZE, cf.TOTAL_TIME, cf.COURANT)
 grid.initiate_materials()
-grid.materials.plasma_slab_ztransf(200, 700, cf.DELTA_T, cf.CONDUCTIVITY, cf.RELAX_TIME_STEPS,
+grid.materials.add_free_space(200)
+grid.materials.plasma_slab_ztransf(300, cf.DELTA_T, cf.CONDUCTIVITY, cf.RELAX_TIME_STEPS,
                                cf.PLASMA_WAVELENGTH_STEPS, cf.PERMITIVITY_INF)
+grid.materials.add_free_space(200)
+grid.confirm_materials()
+
+
 grid.initiate_abc()
 
 #grid.add_probe(250, "Probe1", cf.TOTAL_TIME//2 + 1)
 
+
+
+hdf5_handler = h5h.HDF5Writer(cf.FILE_NAME, cf.TIME_BUFFER, cf.TOTAL_TIME, grid.space_size)
+hdf5_handler.open_file(cf.EDSET_NAME, cf.HDSET_NAME)
 
 for qTime in range (0, cf.TOTAL_TIME):
     grid.update_Hyfield()
