@@ -6,6 +6,12 @@ import incident_field as incf
 
 
 class Grid():
+    """
+    Clase principal qi
+    
+    
+    
+    """
     def __init__(self, total_time, courant):
         self.total_time = total_time
         self.courant = courant
@@ -38,12 +44,6 @@ class Grid():
     def apply_ezTFSF(self, inc_func, tfsf_boundary, current_time, location, time_delay, loc_delay, *func_args):
         self.ez[tfsf_boundary] += inc_func(current_time, location, time_delay, loc_delay, self.courant, *func_args)
 
-
-
-
-    def reset_fields(self):
-        self.ez= np.zeros(self.space_size)
-        self.hy= np.zeros(self.space_size - 1)
 
 
     def update_Hyfield(self):

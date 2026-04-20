@@ -13,7 +13,6 @@ grid.materials.plasma_slab_ztransf(300, cf.DELTA_T, cf.CONDUCTIVITY, cf.RELAX_TI
 grid.materials.add_free_space(200)
 grid.confirm_materials()
 
-
 grid.initiate_abc()
 
 #grid.add_probe(250, "Probe1", cf.TOTAL_TIME//2 + 1)
