@@ -38,6 +38,19 @@ def update_disp_elec_ztransf(start, end, hy, ez, d_field, integrator, low_pass, 
             low_pass[m_retarded] = clows * low_pass[m_retarded] + ez[m]
             ez[m] = ez[m] * imp0
 
+
+@njit
+def update_disp_mag_ADE(start, end, hy, ez, hy_temp, pol_current, coef_jj, coef_jh, cphy_h, cphy_fp, cphy_dp):
+        for m in range(start, end):
+            m_retarded = m - start
+            hy_temp[m_retarded] = hy[m]
+            hy[m] = cphy_h * hy[m] + cphy_fp * ((ez[m + 1] - ez[m]) - cphy_dp * pol_current[m_retarded])
+            pol_current[m_retarded] = coef_jj * pol_current[m_retarded] + coef_jh * (hy_temp[m_retarded] + hy[m])
+
+
+
+
+
 """
 @njit
 def update_magnetic_field(hy, ez, SPACE_SIZE, chyh, chye):

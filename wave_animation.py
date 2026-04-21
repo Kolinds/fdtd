@@ -2,12 +2,12 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
 import h5py
-
 import config as cf
 
+DSET_NAME = cf.EDSET_NAME
 
 with h5py.File(cf.FILE_NAME, "r") as f:
-    dataset = f[cf.EDSET_NAME]
+    dataset = f[DSET_NAME]
     space_size = dataset.shape[1]
 
 #Visual
@@ -29,15 +29,15 @@ wave_line, = ax1.plot(space_array, np.zeros_like(space_array), color = "red")
 time_text = ax1.text(0.05, 0.95, 'CUCARACHA', transform=ax1.transAxes, fontsize=12)
 
 with h5py.File(cf.FILE_NAME, "r") as f:
-        all_data = f[cf.EDSET_NAME][:cf.TOTAL_TIME, :space_size]
+        all_data = f[DSET_NAME][:cf.TOTAL_TIME, :space_size]
 
 def anime_func(frame):
-    frame = frame * 10
+    frame = frame * 2
     present_data = all_data[frame, :]
     wave_line.set_ydata(present_data)
     time_text.set_text(f'Frame: {frame}')
     return wave_line, time_text
 
-ani = animation.FuncAnimation(fig=fig, func=anime_func, frames=cf.TOTAL_TIME//10, interval = 20)
+ani = animation.FuncAnimation(fig=fig, func=anime_func, frames=cf.TOTAL_TIME//2, interval = 20)
 
 plt.show()

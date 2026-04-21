@@ -11,7 +11,9 @@ grid = gr.Grid(cf.TOTAL_TIME, cf.COURANT)
 grid.initiate_materials()
 
 grid.materials.add_free_space(200)
-grid.materials.plasma_slab_ztransf(300, cf.DELTA_T, cf.CONDUCTIVITY, cf.RELAX_TIME_STEPS,
+grid.materials.hplasma_slab_ADE(300, cf.DELTA_T, cf.E_CONDUCTIVITY, cf.RELAX_TIME_STEPS,
+                               cf.PLASMA_WAVELENGTH_STEPS, cf.PERMITIVITY_INF)
+grid.materials.eplasma_slab_ADE(300, cf.DELTA_T, cf.E_CONDUCTIVITY, cf.RELAX_TIME_STEPS,
                                cf.PLASMA_WAVELENGTH_STEPS, cf.PERMITIVITY_INF)
 grid.materials.add_free_space(200)
 
@@ -45,8 +47,8 @@ for qTime in range (0, cf.TOTAL_TIME):
 grid.save_probes(hdf5_handler.file)
 
 
-#h5h.normalization(cf.FILE_NAME, cf.HDSET_NAME, cf.BUFFER_JUMP, h5h.maxValue(cf.FILE_NAME, cf.HDSET_NAME, 100)) #Normalization of the H-field
-#h5h.normalization(cf.FILE_NAME, cf.EDSET_NAME, cf.BUFFER_JUMP, h5h.maxValue(cf.FILE_NAME, cf.EDSET_NAME, 100)) #Normalization of the E-field
+h5h.normalization(cf.FILE_NAME, cf.HDSET_NAME, cf.BUFFER_JUMP, h5h.maxValue(cf.FILE_NAME, cf.HDSET_NAME, 100)) #Normalization of the H-field
+h5h.normalization(cf.FILE_NAME, cf.EDSET_NAME, cf.BUFFER_JUMP, h5h.maxValue(cf.FILE_NAME, cf.EDSET_NAME, 100)) #Normalization of the E-field
 hdf5_handler.close_file()
 
 # holi uwu

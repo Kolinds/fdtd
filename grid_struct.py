@@ -12,6 +12,7 @@ class Grid():
         self.courant = courant
         self.imp0 = 377.0
         self.permitivity0 = 8.854e-12
+        self.permeability0 = 1.256e-6
 
         #List for storing probing arrays
         self.stored_probes = []
@@ -107,7 +108,8 @@ class Material_placement():
                         "hy_basic": upd.update_mag_field,
                         "ez_dispersive_ADE": upd.update_disp_elec_ADE,
                         "ez_dispersive_PLRC": upd.update_disp_elec_PLRC,
-                        "ez_dispersive_ztransf": upd.update_disp_elec_ztransf}
+                        "ez_dispersive_ztransf": upd.update_disp_elec_ztransf,
+                        "hy_dispersive_ADE": upd.update_disp_mag_ADE}
         
         self.hy_action_sequences=[]
         self.ez_action_sequences=[]
@@ -116,6 +118,19 @@ class Material_placement():
         self.hy_action_sequences.clear()
         self.ez_action_sequences.clear()
 
+    def add_free_elec(self, width):
+        #Electric material
+        ceze = 1.0
+        cezh = self.grid.imp0 
+        dictionary = {"ceze": ceze, "cezh": cezh} 
+        self.ez_action_sequences.append(("ez_basic", width, dictionary))
+
+    def add_free_mag(self, width):
+        #Magnetic material
+        chyh = 1.0
+        chye = 1 / self.grid.imp0
+        dictionary = {"chyh": chyh, "chye": chye}
+        self.hy_action_sequences.append(("hy_basic", width, dictionary))
 
     def add_free_space(self, width):
         #Magnetic material
@@ -154,14 +169,9 @@ class Material_placement():
         cezh = (self.grid.imp0 / 9.0) / (1.0 + loss)
         dictionary = {"ceze": ceze, "cezh": cezh}
         self.ez_action_sequences.append(("ez_basic", width, dictionary))
-    
-    def plasma_slab_ADE(self, width, delta_t, conductivity, relax_time, plasma_wavelength, permitivity_inf):
-        #Magnetic material
-        chyh = 1.0
-        chye = 1 / self.grid.imp0
-        dictionary = {"chyh": chyh, "chye": chye}
-        self.hy_action_sequences.append(("hy_basic", width, dictionary))
 
+
+    def eplasma_slab_ADE(self, width, delta_t, conductivity, relax_time, plasma_wavelength, permitivity_inf):
         #Electric field material properties
         #-> Plasma slab
         ez_temp = np.zeros(width)
@@ -183,13 +193,7 @@ class Material_placement():
         self.ez_action_sequences.append(("ez_dispersive_ADE", width, dictionary))
 
 
-    def plasma_slab_PLRC(self, width, delta_t, conductivity, relax_time, plasma_wavelength, permitivity_inf):
-        #Magnetic material
-        chyh = 1.0
-        chye = 1 / self.grid.imp0
-        dictionary = {"chyh": chyh, "chye": chye}
-        self.hy_action_sequences.append(("hy_basic", width, dictionary))
-
+    def eplasma_slab_PLRC(self, width, delta_t, conductivity, relax_time, plasma_wavelength, permitivity_inf):
         #Electric field material properties
         #-> Plasma slab
         ez_temp = np.zeros(width)
@@ -220,13 +224,7 @@ class Material_placement():
         self.ez_action_sequences.append(("ez_dispersive_PLRC", width, dictionary))
 
 
-    def plasma_slab_ztransf(self, width, delta_t, conductivity, relax_time, plasma_wavelength, permitivity_inf):
-        #Magnetic material
-        chyh = 1.0
-        chye = 1 / self.grid.imp0
-        dictionary = {"chyh": chyh, "chye": chye}
-        self.hy_action_sequences.append(("hy_basic", width, dictionary))
-
+    def eplasma_slab_ztransf(self, width, delta_t, conductivity, relax_time, plasma_wavelength, permitivity_inf):
         #Electric field material properties
         #-> Plasma slab
         integrator = np.zeros(width)
@@ -244,6 +242,29 @@ class Material_placement():
                      "imp0": self.grid.imp0, "courant": self.grid.courant}
 
         self.ez_action_sequences.append(("ez_dispersive_ztransf", width, dictionary))
+
+
+
+    def hplasma_slab_ADE(self, width, delta_t, mag_conduct, relax_time, plasma_wavelength, permeability_inf):
+            #Electric field material properties
+            #-> Plasma slab
+            hy_temp = np.zeros(width)
+            pol_current = np.zeros(width)
+
+            coef_jj = (1 - 1/(2*relax_time)) / (1 + 1/(2*relax_time))
+            coef_jh = (1 / (1 + 1/(2*relax_time))) * ((2 * (np.pi)**2 *self.grid.courant * self.grid.imp0) / (plasma_wavelength**2))
+
+            c_1 = (mag_conduct * delta_t) / (2* permeability_inf * self.grid.permeability0)
+            c_2 = (coef_jh * self.grid.courant) / (2 * self.grid.imp0 * permeability_inf)
+
+            cphy_h = (1 - c_1 - c_2) / (1 + c_1 + c_2)
+            cphy_fp = ((self.grid.courant) / (permeability_inf * self.grid.imp0)) / (1 + c_1 + c_2)
+            cphy_dp = 0.5 * (1 + coef_jj)
+
+            dictionary = {"hy_temp": hy_temp, "pol_current": pol_current, "coef_jj": coef_jj, "coef_jh":coef_jh,
+                        "cphy_h": cphy_h, "cphy_fp": cphy_fp, "cphy_dp":cphy_dp}
+
+            self.hy_action_sequences.append(("hy_dispersive_ADE", width, dictionary))
 
 
 
