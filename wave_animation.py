@@ -2,9 +2,13 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
 import h5py
-import bare_bones as bb
+
 import config as cf
 
+
+with h5py.File(cf.FILE_NAME, "r") as f:
+    dataset = f[cf.EDSET_NAME]
+    space_size = dataset.shape[1]
 
 #Visual
 plt.style.use('dark_background')
@@ -12,7 +16,7 @@ fig, ax1 = plt.subplots(figsize=(5, 5), facecolor="#232230",
                  layout='constrained')
 
 ax1.spines['bottom'].set_position(('data', 0))
-ax1.set(xlim = (0, bb.grid.space_size),ylim = (-1, 1))
+ax1.set(xlim = (0, space_size),ylim = (-1, 1))
 ax1.spines["bottom"].set_color("black")
 ax1.spines["bottom"].set_linewidth(2.0)
 for borde in ("left", "right"):
@@ -20,12 +24,12 @@ for borde in ("left", "right"):
 
 
 #Animacion
-space_array = np.linspace(0, bb.grid.space_size, bb.grid.space_size)
+space_array = np.linspace(0, space_size, space_size)
 wave_line, = ax1.plot(space_array, np.zeros_like(space_array), color = "red")
 time_text = ax1.text(0.05, 0.95, 'CUCARACHA', transform=ax1.transAxes, fontsize=12)
 
 with h5py.File(cf.FILE_NAME, "r") as f:
-        all_data = f[cf.EDSET_NAME][:cf.TOTAL_TIME, :bb.grid.space_size]
+        all_data = f[cf.EDSET_NAME][:cf.TOTAL_TIME, :space_size]
 
 def anime_func(frame):
     frame = frame * 10

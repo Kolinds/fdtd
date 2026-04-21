@@ -1,2 +1,1 @@
-
-space_array = np.linspa
+try:

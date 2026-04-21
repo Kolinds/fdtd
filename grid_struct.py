@@ -6,12 +6,7 @@ import incident_field as incf
 
 
 class Grid():
-    """
-    Clase principal qi
-    
-    
-    
-    """
+
     def __init__(self, total_time, courant):
         self.total_time = total_time
         self.courant = courant
@@ -30,6 +25,8 @@ class Grid():
         for action in self.materials.ez_action_sequences:
             self.space_size += action[1]
 
+        #REVISAR: La condicion de frontera del inicio la estoy metiendo dentro del rango 
+        #de los materiales introducidos, y el nodo final magnetico lo elimino.
         self.ez= np.zeros(self.space_size)
         self.hy= np.zeros(self.space_size - 1)
 
