@@ -261,7 +261,7 @@ class Material_placement():
 
     def implicit_plasma_ADE(self, width, delta_t, delta_x_imp, nrelax_time, nplasma_wavelength, conductivity, permitivity_inf):
         # El sistema tiene N+1 nodos para E (desde 0 hasta width inclusive)
-        size = width + 1
+        size = width 
         
         pol_current = np.zeros(size)
         coef_d = np.zeros(size)
@@ -279,12 +279,16 @@ class Material_placement():
         c_a = (1 - (conductivity * delta_t) / (2 * permitivity_inf * self.grid.permitivity0) - (coef_je * self.grid.imp0 * courant_imp) / (2 * permitivity_inf)) / c_den
         c_b = ((self.grid.imp0 * courant_imp) / permitivity_inf) / c_den
 
-        # Inicialización de la matriz con tamaño 'size'
-        coef_a = np.full(size, -(c_b * d_b) / 4)
-        coef_c = np.full(size, -(c_b * d_b) / 4) 
+        # POR ESTO (Corrección de la diagonal y acoplamiento de frontera):
+        alpha_b = -(c_b * d_b) / 4
+        coef_a = np.full(size, alpha_b)
+        coef_c = np.full(size, alpha_b)
+        # La diagonal b debe mantener el operador completo (1 - 2*alpha) en los extremos
+        coef_b = np.full(size, 1.0 - 2.0 * alpha_b)
+
+        # Ahora sí, limpiamos los extremos de las bandas a y c para el algoritmo de Thomas
         coef_a[0] = 0.0
-        coef_c[-1] = 0.0      
-        coef_b = 1.0 - coef_a - coef_c
+        coef_c[-1] = 0.0
 
         # Factorización LU del algoritmo de Thomas
         calc_denom[0] = coef_b[0]
