@@ -47,6 +47,60 @@ def update_disp_mag_ADE(start, end, hy, ez, hy_temp, pol_current, coef_jj, coef_
             hy[m] = cphy_h * hy[m] + cphy_fp * ((ez[m + 1] - ez[m]) - cphy_dp * pol_current[m_retarded])
             pol_current[m_retarded] = coef_jj * pol_current[m_retarded] + coef_jh * (hy_temp[m_retarded] + hy[m])
 
+@njit
+def update_imp_ez_ADE(start, end, hy, ez, ez_old, coef_d, c_a, c_b, d_a, coef_jj, coef_je, calc_denom, coef_a, coef_c, coef_b, pol_current, delta_x):
+        width = end - start
+        
+        # 1. Nodo de frontera izquierda (m = start)
+        # Corregido: hy[start] - hy[start - 1]
+        coef_d[0] = ((c_b / 2) * (1 + d_a) * hy[start] 
+                     - (c_b / 2) * (1 + d_a) * hy[start - 1] 
+                     + (c_a + coef_c[0]) * ez_old[start] 
+                     - coef_c[0] * ez_old[start + 1] 
+                     - c_b * ((1 + coef_jj) / 2) * pol_current[0])
+        coef_d[0] = coef_d[0] / calc_denom[0]
+
+        # 2. Nodos internos de la matriz 
+        for m in range(start + 1, end):
+            m_retarded = m - start
+            # Corregido: hy[m] - hy[m - 1]
+            rhs = ((c_b / 2) * (1 + d_a) * hy[m] 
+                   - (c_b / 2) * (1 + d_a) * hy[m - 1] 
+                   - coef_a[m_retarded] * ez_old[m - 1] 
+                   + (c_a + coef_a[m_retarded] + coef_c[m_retarded]) * ez_old[m] 
+                   - coef_c[m_retarded] * ez_old[m + 1] 
+                   - c_b * ((1 + coef_jj) / 2) * pol_current[m_retarded])
+            coef_d[m_retarded] = (rhs - coef_a[m_retarded] * coef_d[m_retarded - 1]) / calc_denom[m_retarded]
+
+        # 3. Nodo de frontera derecha (m = end)
+        # Corregido: hy[end] - hy[end - 1]
+        coef_d[width] = ((c_b / 2) * (1 + d_a) * hy[end] 
+                         - (c_b / 2) * (1 + d_a) * hy[end - 1] 
+                         - coef_a[width] * ez_old[end - 1] 
+                         + (c_a + coef_a[width]) * ez_old[end] 
+                         - c_b * ((1 + coef_jj) / 2) * pol_current[width])
+        coef_d[width] = (coef_d[width] - coef_a[width] * coef_d[width - 1]) / calc_denom[width]
+
+        # 4. Sustitución hacia atrás (Thomas)
+        ez[end] = coef_d[width]
+        for m in range(end - 1, start - 1, -1):
+            m_retarded = m - start
+            ez[m] = coef_d[m_retarded] - coef_c[m_retarded] * ez[m + 1]
+        
+        # 5. Actualizar la corriente de polarización dispersiva
+        for m in range(start, end + 1):
+            m_retarded = m - start
+            pol_current[m_retarded] = coef_jj * pol_current[m_retarded] + coef_je * (ez[m] + ez_old[m])
+
+@njit
+def update_imp_hy(start, end, hy, ez, ez_old, chyh, chye):
+        # Corregido: Signo de la derivada espacial (ez[m+1] - ez[m]) e índices mapeados al espacio real
+        for m in range(start, end):
+            hy[m] = chyh * hy[m] + chye * (ez[m + 1] - ez[m] + ez_old[m + 1] - ez_old[m])   
+
+
+
+
 
 
 

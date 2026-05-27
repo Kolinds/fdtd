@@ -18,8 +18,8 @@ class HDF5Writer:
         #Open file and initialize datasets and buffers, for E, H-fields
         self.file = h5py.File(self.file_name, "w")
 
-        self.ez_dset = self.file.create_dataset(edset_name, (self.total_time, self.space_size))
-        self.hy_dset = self.file.create_dataset(hdset_name, (self.total_time, self.space_size - 1))
+        self.ez_dset = self.file.create_dataset(edset_name, (self.total_time, self.space_size), dtype='f4')
+        self.hy_dset = self.file.create_dataset(hdset_name, (self.total_time, self.space_size - 1), dtype='f4')
         self.ez_buffer= np.zeros((self.time_buffer, self.space_size))
         self.hy_buffer= np.zeros((self.time_buffer, self.space_size - 1))
 

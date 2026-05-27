@@ -13,6 +13,7 @@ class Grid():
         self.imp0 = 377.0
         self.permitivity0 = 8.854e-12
         self.permeability0 = 1.256e-6
+        self.light_speed = 299_792_458
 
         #List for storing probing arrays
         self.stored_probes = []
@@ -29,6 +30,7 @@ class Grid():
         #REVISAR: La condicion de frontera del inicio la estoy metiendo dentro del rango 
         #de los materiales introducidos, y el nodo final magnetico lo elimino.
         self.ez= np.zeros(self.space_size)
+        self.ez_old = np.zeros(self.space_size)
         self.hy= np.zeros(self.space_size - 1)
 
 
@@ -43,7 +45,6 @@ class Grid():
         self.ez[tfsf_boundary] += inc_func(current_time, location, time_delay, loc_delay, self.courant, *func_args)
 
 
-
     def update_Hyfield(self):
         initial_step = 0
         final_step = 0
@@ -51,8 +52,15 @@ class Grid():
             final_step += width
 
             field_updf = self.materials.function_map[action]
+            
+            # ¡MODIFICACIÓN AQUÍ!
+            # Inyectamos ez_old en los kwargs solo para el método que lo necesita
+            if action == "hy_implicit_ADE":
+                arguments["ez_old"] = self.ez_old
+                
             field_updf(initial_step, final_step, self.hy, self.ez, **arguments)
-                #miauuuu :3
+            # miauuuu :3
+            
             initial_step += width
             
     def update_Ezfield(self):
@@ -62,10 +70,15 @@ class Grid():
             final_step += width
 
             field_updf = self.materials.function_map[action]
-            field_updf(initial_step, final_step, self.hy, self.ez, **arguments)
-                #miauuuu :3
-            initial_step += width
             
+            # INYECTAMOS ez_old
+            if action == "ez_implicit_ADE":
+                arguments["ez_old"] = self.ez_old
+                
+            field_updf(initial_step, final_step, self.hy, self.ez, **arguments)
+                # miauuuu :3
+            
+            initial_step += width
   
 
 
@@ -109,7 +122,9 @@ class Material_placement():
                         "ez_dispersive_ADE": upd.update_disp_elec_ADE,
                         "ez_dispersive_PLRC": upd.update_disp_elec_PLRC,
                         "ez_dispersive_ztransf": upd.update_disp_elec_ztransf,
-                        "hy_dispersive_ADE": upd.update_disp_mag_ADE}
+                        "hy_dispersive_ADE": upd.update_disp_mag_ADE,
+                        "ez_implicit_ADE": upd.update_imp_ez_ADE,
+                        "hy_implicit_ADE": upd.update_imp_hy}
         
         self.hy_action_sequences=[]
         self.ez_action_sequences=[]
@@ -244,27 +259,51 @@ class Material_placement():
         self.ez_action_sequences.append(("ez_dispersive_ztransf", width, dictionary))
 
 
+    def implicit_plasma_ADE(self, width, delta_t, delta_x_imp, nrelax_time, nplasma_wavelength, conductivity, permitivity_inf):
+        # El sistema tiene N+1 nodos para E (desde 0 hasta width inclusive)
+        size = width + 1
+        
+        pol_current = np.zeros(size)
+        coef_d = np.zeros(size)
+        calc_denom = np.zeros(size)
 
-    def hplasma_slab_ADE(self, width, delta_t, mag_conduct, relax_time, plasma_wavelength, permeability_inf):
-            #Electric field material properties
-            #-> Plasma slab
-            hy_temp = np.zeros(width)
-            pol_current = np.zeros(width)
+        courant_imp = self.grid.courant
+        coef_jj = (1 - 1 / (2 * nrelax_time)) / (1 + 1 / (2 * nrelax_time))
+        coef_je = (1 / (1 + 1 / (2 * nrelax_time))) * ((2 * (np.pi)**2 * courant_imp) / (self.grid.imp0 * nplasma_wavelength**2))
 
-            coef_jj = (1 - 1/(2*relax_time)) / (1 + 1/(2*relax_time))
-            coef_jh = (1 / (1 + 1/(2*relax_time))) * ((2 * (np.pi)**2 *self.grid.courant * self.grid.imp0) / (plasma_wavelength**2))
+        c_den = 1 + (conductivity * delta_t) / (2 * permitivity_inf * self.grid.permitivity0) + (coef_je * self.grid.imp0 * courant_imp) / (2 * permitivity_inf)
+        
+        d_a = 1.0
+        d_b = courant_imp / self.grid.imp0
+        
+        c_a = (1 - (conductivity * delta_t) / (2 * permitivity_inf * self.grid.permitivity0) - (coef_je * self.grid.imp0 * courant_imp) / (2 * permitivity_inf)) / c_den
+        c_b = ((self.grid.imp0 * courant_imp) / permitivity_inf) / c_den
 
-            c_1 = (mag_conduct * delta_t) / (2* permeability_inf * self.grid.permeability0)
-            c_2 = (coef_jh * self.grid.courant) / (2 * self.grid.imp0 * permeability_inf)
+        # Inicialización de la matriz con tamaño 'size'
+        coef_a = np.full(size, -(c_b * d_b) / 4)
+        coef_c = np.full(size, -(c_b * d_b) / 4) 
+        coef_a[0] = 0.0
+        coef_c[-1] = 0.0      
+        coef_b = 1.0 - coef_a - coef_c
 
-            cphy_h = (1 - c_1 - c_2) / (1 + c_1 + c_2)
-            cphy_fp = ((self.grid.courant) / (permeability_inf * self.grid.imp0)) / (1 + c_1 + c_2)
-            cphy_dp = 0.5 * (1 + coef_jj)
+        # Factorización LU del algoritmo de Thomas
+        calc_denom[0] = coef_b[0]
+        coef_c[0] = coef_c[0] / calc_denom[0]
+        for m in range(1, size):
+            calc_denom[m] = coef_b[m] - coef_a[m] * coef_c[m - 1]
+            coef_c[m] = coef_c[m] / calc_denom[m]
+        
+        # Quitamos "ez_temp": ez_temp de aquí
+        dict_ez = {"coef_d": coef_d, "c_a": c_a, "c_b": c_b, "d_a": d_a, "coef_jj": coef_jj, "coef_je": coef_je,
+                   "calc_denom": calc_denom, "coef_a": coef_a, "coef_c": coef_c, "coef_b": coef_b, "pol_current": pol_current, "delta_x": delta_x_imp}
+        self.ez_action_sequences.append(("ez_implicit_ADE", width, dict_ez))
 
-            dictionary = {"hy_temp": hy_temp, "pol_current": pol_current, "coef_jj": coef_jj, "coef_jh":coef_jh,
-                        "cphy_h": cphy_h, "cphy_fp": cphy_fp, "cphy_dp":cphy_dp}
-
-            self.hy_action_sequences.append(("hy_dispersive_ADE", width, dictionary))
+        # Parámetros para H_y corregidos con las constantes de Crank-Nicolson
+        chyh = d_a
+        chye = d_b / 2  # Crucial: El promedio temporal introduce el factor /2
+        
+        dict_hy = {"chyh": chyh, "chye": chye}
+        self.hy_action_sequences.append(("hy_implicit_ADE", width, dict_hy))
 
 
 

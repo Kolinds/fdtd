@@ -16,7 +16,7 @@ fig, ax1 = plt.subplots(figsize=(5, 5), facecolor="#232230",
                  layout='constrained')
 
 ax1.spines['bottom'].set_position(('data', 0))
-ax1.set(xlim = (0, space_size),ylim = (-1, 1))
+ax1.set(xlim = (0, space_size), ylim = (-1, 1)) #ylim = (-1, 1)
 ax1.spines["bottom"].set_color("black")
 ax1.spines["bottom"].set_linewidth(2.0)
 for borde in ("left", "right"):
@@ -32,12 +32,12 @@ with h5py.File(cf.FILE_NAME, "r") as f:
         all_data = f[DSET_NAME][:cf.TOTAL_TIME, :space_size]
 
 def anime_func(frame):
-    frame = frame * 2
+    frame = frame * 5
     present_data = all_data[frame, :]
     wave_line.set_ydata(present_data)
     time_text.set_text(f'Frame: {frame}')
     return wave_line, time_text
 
-ani = animation.FuncAnimation(fig=fig, func=anime_func, frames=cf.TOTAL_TIME//2, interval = 20)
+ani = animation.FuncAnimation(fig=fig, func=anime_func, frames=cf.TOTAL_TIME//5, interval = 20)
 
 plt.show()
