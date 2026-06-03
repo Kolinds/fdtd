@@ -5,14 +5,17 @@ import incident_field as incf
 
 
 #Creamos el grid
-grid = gr.Grid(cf.TOTAL_TIME, cf.COURANT)
+grid = gr.Grid(cf.TOTAL_TIME, cf.COURANT, cf.MAX_FREQ, cf.MIN_RPERMITIVITY, cf.MIN_RPERMEABILITY)
 
 #Establecemos los materiales
 grid.initiate_materials()
 
 grid.materials.add_free_space(300)
-grid.materials.implicit_plasma_ADE(200, cf.DELTA_T, cf.DELTA_X_IMP, cf.RELAX_TIME_STEPS, 
+grid.materials.implicit_plasma_ADE(300, cf.DELTA_T, cf.RELAX_TIME_STEPS, 
                                    cf.PLASMA_WAVELENGTH_STEPS, cf.E_CONDUCTIVITY, cf.PERMITIVITY_INF)
+#grid.materials.eplasma_slab_ADE(300, cf.E_CONDUCTIVITY, cf.RELAX_TIME_STEPS, cf.PLASMA_WAVELENGTH_STEPS, cf.PERMITIVITY_INF)
+#grid.materials.add_free_mag(300)
+
 grid.materials.add_free_space(200)
 
 grid.confirm_materials()
@@ -21,7 +24,7 @@ grid.confirm_materials()
 grid.initiate_abc()
 
 #Añadimos probes de medición en ciertos puntos
-#grid.add_probe(250, "Probe1", cf.TOTAL_TIME//2 + 1)
+grid.add_probe(350, "Probe1", cf.TOTAL_TIME//2)
 
 
 #Abrimos el gestor del archivo hdf5 y ejecutamos el civlo principal
@@ -31,7 +34,8 @@ hdf5_handler.open_file(cf.EDSET_NAME, cf.HDSET_NAME)
 # Bucle temporal corregido con resincronización TFSF
 for qTime in range(0, cf.TOTAL_TIME):
     # Guardar el pasado para el ADE implícito
-    grid.ez_old[:] = grid.ez
+    grid.ez_old[:] = grid.ez[:]
+    grid.hy_old[:] = grid.hy[:]
 
     # 1. Actualización Eléctrica Implícita (Calcula Ez^(n+1))
     grid.update_Ezfield()
@@ -48,17 +52,20 @@ for qTime in range(0, cf.TOTAL_TIME):
     # ¡SOLUCIÓN! Como Hy avanzó a n+3/2, necesitamos corregir usando E_inc^(n+1).
     # Pasamos qTime + 1 para desplazar la forma de onda analítica al instante correcto.
     grid.apply_hyTFSF(incf.ricker, cf.TFSF_BOUNDARY, qTime + 1, 50, 0, 0, cf.STEPS_WAVELENGTH, cf.RICKER_DELAY)
-
+    
     # Diagnósticos y guardado
-    grid.r_DFT(qTime)
+    #grid.r_DFT(qTime)
     hdf5_handler.update_file(qTime, grid.ez, grid.hy)
 
-
-grid.save_probes(hdf5_handler.file)
+print("Check1")
+#grid.save_probes(hdf5_handler.file)
 
 
 #h5h.normalization(cf.FILE_NAME, cf.HDSET_NAME, cf.BUFFER_JUMP, h5h.maxValue(cf.FILE_NAME, cf.HDSET_NAME, 100)) #Normalization of the H-field
 #h5h.normalization(cf.FILE_NAME, cf.EDSET_NAME, cf.BUFFER_JUMP, h5h.maxValue(cf.FILE_NAME, cf.EDSET_NAME, 100)) #Normalization of the E-field
+#h5h.normalization(cf.FILE_NAME, "Probes/Probe1", cf.BUFFER_JUMP, h5h.maxValue(cf.FILE_NAME, "Probes/Probe1", 100))
+print("Check2")
 hdf5_handler.close_file()
+print("Simulación terminada de manera segura.")
 
 # holi uwu

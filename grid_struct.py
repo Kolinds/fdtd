@@ -7,13 +7,19 @@ import incident_field as incf
 
 class Grid():
 
-    def __init__(self, total_time, courant):
+    def __init__(self, total_time, courant, max_freq, max_rpermitivity, max_rpermeability):
         self.total_time = total_time
         self.courant = courant
         self.imp0 = 377.0
         self.permitivity0 = 8.854e-12
         self.permeability0 = 1.256e-6
         self.light_speed = 299_792_458
+
+        #Calculate parameters
+        lambda_min = self.light_speed / (max_freq * np.sqrt(max_rpermitivity * max_rpermeability))
+        #Adequate estimate
+        self.delta_x = lambda_min / 20
+        self.delta_t = courant * (self.delta_x / self.light_speed)
 
         #List for storing probing arrays
         self.stored_probes = []
@@ -32,6 +38,7 @@ class Grid():
         self.ez= np.zeros(self.space_size)
         self.ez_old = np.zeros(self.space_size)
         self.hy= np.zeros(self.space_size - 1)
+        self.hy_old= np.zeros(self.space_size - 1)
 
 
     def initiate_abc(self):
@@ -39,10 +46,10 @@ class Grid():
 
 
     def apply_hyTFSF(self, inc_func, tfsf_boundary, current_time, location, time_delay, loc_delay, *func_args):        
-        self.hy[tfsf_boundary - 1] -= inc_func(current_time, location, time_delay, loc_delay, self.courant, *func_args) / self.imp0
+        self.hy[tfsf_boundary - 1] -= self.courant * inc_func(current_time, location, time_delay, loc_delay, self.courant, *func_args) / self.imp0
 
     def apply_ezTFSF(self, inc_func, tfsf_boundary, current_time, location, time_delay, loc_delay, *func_args):
-        self.ez[tfsf_boundary] += inc_func(current_time, location, time_delay, loc_delay, self.courant, *func_args)
+        self.ez[tfsf_boundary] += self.courant * inc_func(current_time, location, time_delay, loc_delay, self.courant, *func_args)
 
 
     def update_Hyfield(self):
@@ -57,6 +64,8 @@ class Grid():
             # Inyectamos ez_old en los kwargs solo para el método que lo necesita
             if action == "hy_implicit_ADE":
                 arguments["ez_old"] = self.ez_old
+                arguments["hy_old"] = self.hy_old
+
                 
             field_updf(initial_step, final_step, self.hy, self.ez, **arguments)
             # miauuuu :3
@@ -64,8 +73,8 @@ class Grid():
             initial_step += width
             
     def update_Ezfield(self):
-        initial_step = 1
-        final_step = 1
+        initial_step = 0
+        final_step = 0
         for action, width, arguments in self.materials.ez_action_sequences:
             final_step += width
 
@@ -74,24 +83,27 @@ class Grid():
             # INYECTAMOS ez_old
             if action == "ez_implicit_ADE":
                 arguments["ez_old"] = self.ez_old
+                arguments["hy_old"] = self.hy_old
+            
+            if (action == "ez_basic"):
+                arguments["ez_old"] = self.ez_old
+
                 
             field_updf(initial_step, final_step, self.hy, self.ez, **arguments)
                 # miauuuu :3
             
-            initial_step += width
+            initial_step += width 
   
 
 
     #Running discrete Fourier Transform
     def r_DFT(self, current_time):
         for actual_probe in self.stored_probes:
-            """
-            incf.running_DFT(actual_probe["array"], actual_probe["location"], self.ez, self.total_time, current_time)
-            """
+            #incf.running_DFT(actual_probe["array"], actual_probe["location"], self.ez, self.total_time, current_time)
             freq_array = np.arange(actual_probe["size"])
-            angles_array = (2*np.pi * freq_array * current_time)/self.total_time
-            actual_probe["array"].real += self.ez[actual_probe["location"]]*np.cos(angles_array)
-            actual_probe["array"].imag -= self.ez[actual_probe["location"]]*np.sin(angles_array)
+            angles_array = (2 * np.pi * freq_array * current_time) / self.total_time
+            kernel = np.exp(-1j * angles_array)
+            actual_probe["array"] += self.ez[actual_probe["location"]] * kernel
 
 
     #Set probes 
@@ -136,27 +148,27 @@ class Material_placement():
     def add_free_elec(self, width):
         #Electric material
         ceze = 1.0
-        cezh = self.grid.imp0 
+        cezh = self.grid.imp0 * self.grid.courant
         dictionary = {"ceze": ceze, "cezh": cezh} 
         self.ez_action_sequences.append(("ez_basic", width, dictionary))
 
     def add_free_mag(self, width):
         #Magnetic material
         chyh = 1.0
-        chye = 1 / self.grid.imp0
+        chye = self.grid.courant / self.grid.imp0
         dictionary = {"chyh": chyh, "chye": chye}
         self.hy_action_sequences.append(("hy_basic", width, dictionary))
 
     def add_free_space(self, width):
         #Magnetic material
         chyh = 1.0
-        chye = 1 / self.grid.imp0
+        chye = self.grid.courant / self.grid.imp0
         dictionary = {"chyh": chyh, "chye": chye}
         self.hy_action_sequences.append(("hy_basic", width, dictionary))
 
         #Electric material
         ceze = 1.0
-        cezh = self.grid.imp0 
+        cezh = self.grid.imp0 * self.grid.courant
         dictionary = {"ceze": ceze, "cezh": cezh} 
         self.ez_action_sequences.append(("ez_basic", width, dictionary))
 
@@ -186,7 +198,7 @@ class Material_placement():
         self.ez_action_sequences.append(("ez_basic", width, dictionary))
 
 
-    def eplasma_slab_ADE(self, width, delta_t, conductivity, relax_time, plasma_wavelength, permitivity_inf):
+    def eplasma_slab_ADE(self, width, conductivity, relax_time, plasma_wavelength, permitivity_inf):
         #Electric field material properties
         #-> Plasma slab
         ez_temp = np.zeros(width)
@@ -195,7 +207,7 @@ class Material_placement():
         coef_jj = (1 - 1/(2*relax_time)) / (1 + 1/(2*relax_time))
         coef_je = (1 / (1 + 1/(2*relax_time))) * ((2 * (np.pi)**2 *self.grid.courant) / (self.grid.imp0 * plasma_wavelength**2))
 
-        c_1 = (conductivity * delta_t) / (2* permitivity_inf * self.grid.permitivity0)
+        c_1 = (conductivity * self.grid.delta_t) / (2* permitivity_inf * self.grid.permitivity0)
         c_2 = (coef_je * self.grid.imp0 * self.grid.courant) / (2 * permitivity_inf)
 
         cpez_e = (1 - c_1 - c_2) / (1 + c_1 + c_2)
@@ -259,25 +271,32 @@ class Material_placement():
         self.ez_action_sequences.append(("ez_dispersive_ztransf", width, dictionary))
 
 
-    def implicit_plasma_ADE(self, width, delta_t, delta_x_imp, nrelax_time, nplasma_wavelength, conductivity, permitivity_inf):
-        # El sistema tiene N+1 nodos para E (desde 0 hasta width inclusive)
+    def implicit_plasma_ADE(self, width, delta_t, nrelax_time, nplasma_wavelength, conductivity, permitivity_inf):
         size = width 
-        
+        courant_imp = 3.2
+
         pol_current = np.zeros(size)
         coef_d = np.zeros(size)
         calc_denom = np.zeros(size)
 
-        courant_imp = self.grid.courant
-        coef_jj = (1 - 1 / (2 * nrelax_time)) / (1 + 1 / (2 * nrelax_time))
-        coef_je = (1 / (1 + 1 / (2 * nrelax_time))) * ((2 * (np.pi)**2 * courant_imp) / (self.grid.imp0 * nplasma_wavelength**2))
+        
+        nplasma_wavelength = nplasma_wavelength * (courant_imp / self.grid.courant)
 
-        c_den = 1 + (conductivity * delta_t) / (2 * permitivity_inf * self.grid.permitivity0) + (coef_je * self.grid.imp0 * courant_imp) / (2 * permitivity_inf)
+        coef_jj = (1.0 - 1.0 / (2.0 * nrelax_time)) / (1.0 + 1.0 / (2.0 * nrelax_time))
+        coef_je = (1.0 / (1.0 + 1.0 / (2.0 * nrelax_time))) * ((2.0 * (np.pi)**2 * courant_imp) / (self.grid.imp0 * nplasma_wavelength**2))
+
+        c_den = 1.0 + (conductivity * delta_t) / (2.0 * permitivity_inf * self.grid.permitivity0) + (coef_je * self.grid.imp0 * courant_imp) / (2.0 * permitivity_inf)
         
         d_a = 1.0
         d_b = courant_imp / self.grid.imp0
         
-        c_a = (1 - (conductivity * delta_t) / (2 * permitivity_inf * self.grid.permitivity0) - (coef_je * self.grid.imp0 * courant_imp) / (2 * permitivity_inf)) / c_den
+        c_a = (1.0 - (conductivity * delta_t) / (2.0 * permitivity_inf * self.grid.permitivity0) + (coef_je * self.grid.imp0 * courant_imp) / (2.0 * permitivity_inf)) / c_den
         c_b = ((self.grid.imp0 * courant_imp) / permitivity_inf) / c_den
+
+        #COMPROBACION SIN DISPERSIVO
+        c_a = 1
+        c_b = courant_imp * self.grid.imp0
+
 
         # POR ESTO (Corrección de la diagonal y acoplamiento de frontera):
         alpha_b = -(c_b * d_b) / 4
@@ -289,6 +308,8 @@ class Material_placement():
         # Ahora sí, limpiamos los extremos de las bandas a y c para el algoritmo de Thomas
         coef_a[0] = 0.0
         coef_c[-1] = 0.0
+        coef_b[0] = 1.0 - alpha_b
+        coef_b[-1] = 1.0 - alpha_b
 
         # Factorización LU del algoritmo de Thomas
         calc_denom[0] = coef_b[0]
@@ -297,16 +318,24 @@ class Material_placement():
             calc_denom[m] = coef_b[m] - coef_a[m] * coef_c[m - 1]
             coef_c[m] = coef_c[m] / calc_denom[m]
         
-        # Quitamos "ez_temp": ez_temp de aquí
-        dict_ez = {"coef_d": coef_d, "c_a": c_a, "c_b": c_b, "d_a": d_a, "coef_jj": coef_jj, "coef_je": coef_je,
-                   "calc_denom": calc_denom, "coef_a": coef_a, "coef_c": coef_c, "coef_b": coef_b, "pol_current": pol_current, "delta_x": delta_x_imp}
+        
+
+
+        chyh = 1
+        chye = courant_imp / self.grid.imp0
+        chye0 = self.grid.courant / self.grid.imp0
+
+        dict_ez = {
+            "alpha_b": alpha_b, "coef_d": coef_d, "c_a": c_a, "c_b": c_b, "d_a": d_a, 
+            "coef_jj": coef_jj, "coef_je": coef_je, "calc_denom": calc_denom, 
+            "coef_a": coef_a, "coef_c": coef_c, "coef_b": coef_b, 
+            "pol_current": pol_current,
+            "imp0": self.grid.imp0, "courant": self.grid.courant}
         self.ez_action_sequences.append(("ez_implicit_ADE", width, dict_ez))
 
-        # Parámetros para H_y corregidos con las constantes de Crank-Nicolson
-        chyh = d_a
-        chye = d_b / 2  # Crucial: El promedio temporal introduce el factor /2
         
-        dict_hy = {"chyh": chyh, "chye": chye}
+        
+        dict_hy = {"chyh": chyh, "chye": chye, "chye0": chye0}
         self.hy_action_sequences.append(("hy_implicit_ADE", width, dict_hy))
 
 

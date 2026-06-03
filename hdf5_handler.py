@@ -60,11 +60,20 @@ class HDF5Writer:
 
     def close_file(self):
         if self.file is not None:
-            """            
-            buffer_index = self.actual_time % self.time_buffer
-                        self.ez_dset[self.actual_time - buffer_index:self.actual_time, 0:self.space_size] = self.ez_buffer
-                        self.hy_dset[self.actual_time - buffer_index:self.actual_time, 0:self.space_size - 1] = self.hy_buffer
-            """
+            # MODIFICACIÓN: Vaciar el búfer residual correctamente antes de cerrar
+            # Calculamos cuántos elementos quedaron sin escribir
+            elements_in_buffer = (self.actual_time + 1) % self.time_buffer
+            
+            if elements_in_buffer != 0:
+                start_idx = self.actual_time + 1 - elements_in_buffer
+                end_idx = self.actual_time + 1
+                
+                # Escribimos solo la porción del búfer que tiene datos nuevos
+                self.ez_dset[start_idx:end_idx, 0:self.space_size] = self.ez_buffer[:elements_in_buffer, :]
+                self.hy_dset[start_idx:end_idx, 0:self.space_size - 1] = self.hy_buffer[:elements_in_buffer, :]
+
+            # Forzamos a WASM a escribir los datos de caché al sistema de archivos virtual
+            self.file.flush() 
             self.file.close()
 
 
