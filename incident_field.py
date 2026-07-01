@@ -30,14 +30,70 @@ def adjusted_loss(ppw, penetration_dist, er, ur, courant):
     return (np.pi / ppw)*courant*((1+(ppw**2/(2 * np.pi**2 * penetration_dist**2 * er * ur)))**2 - 1)**0.5
 
 
-def transmission_c(location, incidident_f, transmitted_f, total_freq, total_time):
-    transm_array = np.zeros(total_freq, dtype=np.complex64)
-    for n_freq in range(0, total_freq):
-        transm_array[n_freq] = np.exp(1j * 4 * np.pi * location * n_freq / total_time) * (transmitted_f[n_freq] / incidident_f[n_freq])
+def gtransmission_coef(total_time, location, vacuum_f, plasma_f, ntotal_freq, nplasma_wavelength, nrelax_time, light_speed, delta_x, delta_t):
+    # 1. Calculate frequency step
+    delta_f = 1 / (total_time * delta_t)
+
+    # 2. Vectorize the frequency array (creates an array [0, 1, 2, ... ntotal_freq-1])
+    n_freq_array = np.arange(ntotal_freq)
+    
+    # Calculate omega array for all frequencies simultaneously
+    omega_actual = 2 * np.pi * delta_f * n_freq_array
+    
+    # 3. Calculate constants (no need to do this inside a loop)
+    omega_plasma = 2 * np.pi * light_speed / (nplasma_wavelength * delta_x)
+    
+    # Calculate relaxation time (tau) and collision frequency (Gamma)
+    tau = nrelax_time * delta_t
+    gamma_damping = 1 / tau #if tau != 0 else 0.0
+
+    # Avoid division by zero at DC (0 Hz) by temporarily replacing 0 with a tiny number
+    omega_safe = np.where(omega_actual == 0, 1e-15, omega_actual)
+
+    # 4. Calculate Propagation Constants (Arrays)
+    gamma_vacuum = 1j * omega_safe / light_speed
+    
+    # Drude relative permittivity: 1 - (wp^2 / (w * (w - j*Gamma)))
+    epsilon_r = 1 - (omega_plasma**2) / (omega_safe * (omega_safe + 1j * gamma_damping))
+    
+    # Gamma plasma uses np.sqrt, not np.square
+    gamma_plasma = 1j * (omega_safe / light_speed) * np.sqrt(epsilon_r)
+
+    # 5. Calculate transmission coefficient array all at once
+    phase_correction = np.exp((gamma_plasma - gamma_vacuum) * location * delta_x)
+    transm_array = phase_correction * (plasma_f / vacuum_f)
+    
+    # Handle the DC term properly if it evaluates to NaN due to 0/0
+    transm_array[0] = 0.0 + 0.0j 
     
     return transm_array
 
+def greflection_coef(total_time, location, vacuum_f, reflected_f, ntotal_freq, light_speed, delta_x, delta_t):
+    # 1. Calculate frequency step
+    delta_f = 1 / total_time
 
+    # 2. Vectorize the frequency array
+    n_freq_array = np.arange(ntotal_freq)
+    
+    # Calculate omega array for all frequencies simultaneously
+    omega_actual = 2 * np.pi * delta_f * n_freq_array
+    
+    # Avoid division by zero at DC (0 Hz)
+    omega_safe = np.where(omega_actual == 1, 1e-15, omega_actual)
+
+    # 3. Calculate Propagation Constant for Vacuum only
+    # The reflected wave travels backwards through vacuum, not plasma!
+    gamma_vacuum = 1j * omega_safe / light_speed
+
+    # 4. Calculate reflection coefficient array all at once
+    # 'location' here must be the distance (in cells) from the interface to the reflection monitor
+    phase_correction = np.exp(gamma_vacuum * location * delta_x)
+    reflect_array = phase_correction * (reflected_f / vacuum_f)
+    
+    # Handle the DC term properly if it evaluates to NaN due to 0/0
+    reflect_array[0] = 0.0 + 0.0j 
+    
+    return reflect_array
 
 
 
@@ -70,13 +126,18 @@ incident_f = hdf5_handler.retrieve_array("/Probes/", "Probe2")
 trasmission_coef = df.transmission_c(280-200, incident_f, transmitted_f, cf.TOTAL_TIME //2 + 1, cf.TOTAL_TIME)
 hdf5_handler.save_array("Coef/", "transmission", trasmission_coef)
 
+
+
 """
 
 
 """ 
-    Only equal: = -> Hardwired source
-    Summed: += -> Source 
-    ez[50] += np.exp((-(30 - 30)**2)/100)
+def transmission_c(location, incidident_f, transmitted_f, total_freq, total_time):
+    transm_array = np.zeros(total_freq, dtype=np.complex64)
+    for n_freq in range(0, total_freq):
+        transm_array[n_freq] = np.exp(1j * 4 * np.pi * location * n_freq / total_time) * (transmitted_f[n_freq] / incidident_f[n_freq])
+    
+    return transm_array
 """
 
     

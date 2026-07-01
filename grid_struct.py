@@ -20,6 +20,7 @@ class Grid():
         #Adequate estimate
         self.delta_x = lambda_min / 20
         self.delta_t = courant * (self.delta_x / self.light_speed)
+        self.delta_f = 1/(self.delta_t * total_time)
 
         #List for storing probing arrays
         self.stored_probes = []
@@ -108,7 +109,7 @@ class Grid():
 
     #Set probes 
     def add_probe(self, location, array_name, array_size):
-        new_probe = np.zeros(array_size, dtype=np.complex64)
+        new_probe = np.zeros(array_size, dtype=np.complex128)
         probe_data = {
             "name": array_name,
             "size": array_size,
@@ -123,6 +124,25 @@ class Grid():
             group.create_dataset(actual_probe["name"], data=(1/self.space_size)*actual_probe["array"])
         self.stored_probes.clear()
 
+
+"""
+def gtransmission_coef(self, location, vacuum_f, plasma_f, ntotal_freq, nplasma_wavelength, nrelax_time):
+        #El espaciado entre frecuencias es 1/self.total_times
+        delta_f = 1 / self.total_time
+
+        transm_array = np.zeros(ntotal_freq, dtype=np.complex64)
+        for n_freq in range(0, ntotal_freq):
+            omega_actual = 2 * np.pi * delta_f * n_freq
+            omega_plasma = 2 * np.pi * self.light_speed * (1/(nplasma_wavelength * self.delta_x))
+            loss_t = 1/(nrelax_time * self.delta_t)
+
+            gamma_vacuum = 1j * omega_actual * (1/self.light_speed)
+            gamma_plasma = 1j * omega_actual * (1/self.light_speed) * np.sqrt(1 - (omega_plasma**2)/(omega_actual * (omega_actual - 1j * loss_t)))
+            transm_array[n_freq] = np.exp((gamma_plasma - gamma_vacuum) * location * self.delta_x) * (plasma_f[n_freq] / vacuum_f[n_freq])
+        
+        return transm_array
+"""
+    
 
 
 class Material_placement():
@@ -220,7 +240,7 @@ class Material_placement():
         self.ez_action_sequences.append(("ez_dispersive_ADE", width, dictionary))
 
 
-    def eplasma_slab_PLRC(self, width, delta_t, conductivity, relax_time, plasma_wavelength, permitivity_inf):
+    def eplasma_slab_PLRC(self, width, conductivity, relax_time, plasma_wavelength, permitivity_inf):
         #Electric field material properties
         #-> Plasma slab
         ez_temp = np.zeros(width)
@@ -251,7 +271,7 @@ class Material_placement():
         self.ez_action_sequences.append(("ez_dispersive_PLRC", width, dictionary))
 
 
-    def eplasma_slab_ztransf(self, width, delta_t, conductivity, relax_time, plasma_wavelength, permitivity_inf):
+    def eplasma_slab_ztransf(self, width, conductivity, relax_time, plasma_wavelength, permitivity_inf):
         #Electric field material properties
         #-> Plasma slab
         integrator = np.zeros(width)
@@ -271,9 +291,9 @@ class Material_placement():
         self.ez_action_sequences.append(("ez_dispersive_ztransf", width, dictionary))
 
 
-    def implicit_plasma_ADE(self, width, delta_t, nrelax_time, nplasma_wavelength, conductivity, permitivity_inf):
+    def implicit_plasma_ADE(self, width, nrelax_time, nplasma_wavelength, conductivity, permitivity_inf):
         size = width 
-        courant_imp = 3.2
+        courant_imp = 3*self.grid.courant
 
         pol_current = np.zeros(size)
         coef_d = np.zeros(size)
@@ -285,17 +305,17 @@ class Material_placement():
         coef_jj = (1.0 - 1.0 / (2.0 * nrelax_time)) / (1.0 + 1.0 / (2.0 * nrelax_time))
         coef_je = (1.0 / (1.0 + 1.0 / (2.0 * nrelax_time))) * ((2.0 * (np.pi)**2 * courant_imp) / (self.grid.imp0 * nplasma_wavelength**2))
 
-        c_den = 1.0 + (conductivity * delta_t) / (2.0 * permitivity_inf * self.grid.permitivity0) + (coef_je * self.grid.imp0 * courant_imp) / (2.0 * permitivity_inf)
+        c_den = 1.0 + (conductivity * self.grid.delta_t) / (2.0 * permitivity_inf * self.grid.permitivity0) + (coef_je * self.grid.imp0 * courant_imp) / (2.0 * permitivity_inf)
         
         d_a = 1.0
         d_b = courant_imp / self.grid.imp0
         
-        c_a = (1.0 - (conductivity * delta_t) / (2.0 * permitivity_inf * self.grid.permitivity0) + (coef_je * self.grid.imp0 * courant_imp) / (2.0 * permitivity_inf)) / c_den
+        c_a = (1.0 - (conductivity * self.grid.delta_t) / (2.0 * permitivity_inf * self.grid.permitivity0) + (coef_je * self.grid.imp0 * courant_imp) / (2.0 * permitivity_inf)) / c_den
         c_b = ((self.grid.imp0 * courant_imp) / permitivity_inf) / c_den
 
         #COMPROBACION SIN DISPERSIVO
-        c_a = 1
-        c_b = courant_imp * self.grid.imp0
+        #c_a = 1
+        #c_b = courant_imp * self.grid.imp0
 
 
         # POR ESTO (Corrección de la diagonal y acoplamiento de frontera):

@@ -17,12 +17,17 @@ mpl.rcParams['xtick.top'] = True
 mpl.rcParams['ytick.right'] = True
 
 # ==========================================
-# CONFIGURACIÓN DE LA CAPTURA
+# CONFIGURACIÓN DE LA CAPTURA Y ENTORNO
 # ==========================================
 DSET_NAME = cf.EDSET_NAME
-# ¡Elige aquí el instante exacto que quieres capturar!
-FRAME_A_CAPTURAR = 400
-NOMBRE_ARCHIVO_SALIDA = f"captura_onda_t{FRAME_A_CAPTURAR}.pdf" # Usa .png si usas Word, .pdf si usas LaTeX
+FRAME_A_CAPTURAR = 3000
+NOMBRE_ARCHIVO_SALIDA = f"captura_onda_t{FRAME_A_CAPTURAR}.pdf"
+
+# --- NUEVAS OPCIONES PARA LA INTERFAZ PLASMA-VACÍO ---
+MOSTRAR_INTERFAZ = True  # Cambia a False si no quieres mostrar la separación
+NODO_INTERFAZ = 3000      # Cambia este valor al nodo exacto de la interfaz
+SOMBREAR_PLASMA = True   # Cambia a False si solo quieres la línea sin el fondo coloreado
+# -----------------------------------------------------
 
 # Cargar solo el frame que necesitamos para ahorrar memoria
 try:
@@ -39,7 +44,7 @@ except Exception as e:
 # ==========================================
 fig, ax1 = plt.subplots(figsize=(7, 4.5))
 
-ax1.set_xlim(0, space_size)
+ax1.set_xlim(2500, 3500)
 ax1.set_ylim(-1.1, 1.1)
 ax1.set_yticks([-1.0, -0.5, 0.0, 0.5, 1.0])
 
@@ -48,6 +53,16 @@ ax1.set_ylabel(r"Campo eléctrico norm. ($E / E_{max}$)", fontsize=13)
 
 ax1.axhline(0, color='black', linewidth=0.8, linestyle='-.', alpha=0.5)
 ax1.grid(True, linestyle=':', alpha=0.6)
+
+# --- DIBUJAR LA INTERFAZ PLASMA-VACÍO ---
+if MOSTRAR_INTERFAZ:
+    # Línea vertical punteada
+    ax1.axvline(x=NODO_INTERFAZ, color='teal', linewidth=1.5, linestyle='--', label=r'Interfaz vacío-plasma')
+    
+    # Sombreado opcional para identificar visualmente la región del plasma
+    if SOMBREAR_PLASMA:
+        ax1.axvspan(NODO_INTERFAZ, space_size, color='teal', alpha=0.08)
+# ----------------------------------------
 
 # Eje X
 space_array = np.arange(space_size)
@@ -64,8 +79,6 @@ ax1.legend(loc="upper right", framealpha=0.9, edgecolor="black")
 # ==========================================
 # GUARDAR LA IMAGEN EN ALTA CALIDAD
 # ==========================================
-# bbox_inches='tight' recorta los márgenes blancos sobrantes alrededor de la gráfica
-# dpi=300 o dpi=600 es el estándar exigido por las revistas científicas
 plt.savefig(f"./fotogramas/{NOMBRE_ARCHIVO_SALIDA}", dpi=600, bbox_inches='tight')
 print(f"Imagen guardada exitosamente como: {NOMBRE_ARCHIVO_SALIDA}")
 

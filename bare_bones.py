@@ -10,13 +10,14 @@ grid = gr.Grid(cf.TOTAL_TIME, cf.COURANT, cf.MAX_FREQ, cf.MIN_RPERMITIVITY, cf.M
 #Establecemos los materiales
 grid.initiate_materials()
 
-grid.materials.add_free_space(300)
-grid.materials.implicit_plasma_ADE(300, cf.DELTA_T, cf.RELAX_TIME_STEPS, 
-                                   cf.PLASMA_WAVELENGTH_STEPS, cf.E_CONDUCTIVITY, cf.PERMITIVITY_INF)
-#grid.materials.eplasma_slab_ADE(300, cf.E_CONDUCTIVITY, cf.RELAX_TIME_STEPS, cf.PLASMA_WAVELENGTH_STEPS, cf.PERMITIVITY_INF)
-#grid.materials.add_free_mag(300)
+grid.materials.add_free_space(3000)
+#grid.materials.implicit_plasma_ADE(300, cf.RELAX_TIME_STEPS, 
+#                                   cf.PLASMA_WAVELENGTH_STEPS, cf.E_CONDUCTIVITY, cf.PERMITIVITY_INF)
+grid.materials.eplasma_slab_ADE(10000, cf.E_CONDUCTIVITY, cf.RELAX_TIME_STEPS, cf.PLASMA_WAVELENGTH_STEPS, cf.PERMITIVITY_INF)
+grid.materials.add_free_mag(10000)
+grid.materials.add_free_space(1)
 
-grid.materials.add_free_space(200)
+
 
 grid.confirm_materials()
 
@@ -24,7 +25,9 @@ grid.confirm_materials()
 grid.initiate_abc()
 
 #Añadimos probes de medición en ciertos puntos
-grid.add_probe(350, "Probe1", cf.TOTAL_TIME//2)
+mapped_frequencies = int(cf.MAX_FREQ / grid.delta_f)
+grid.add_probe(3450, "Transmitted", mapped_frequencies)
+grid.add_probe(900, "Reflected", mapped_frequencies)
 
 
 #Abrimos el gestor del archivo hdf5 y ejecutamos el civlo principal
@@ -54,16 +57,18 @@ for qTime in range(0, cf.TOTAL_TIME):
     grid.apply_hyTFSF(incf.ricker, cf.TFSF_BOUNDARY, qTime + 1, 50, 0, 0, cf.STEPS_WAVELENGTH, cf.RICKER_DELAY)
     
     # Diagnósticos y guardado
-    #grid.r_DFT(qTime)
+    grid.r_DFT(qTime)
     hdf5_handler.update_file(qTime, grid.ez, grid.hy)
 
 print("Check1")
-#grid.save_probes(hdf5_handler.file)
+grid.save_probes(hdf5_handler.file)
 
 
 #h5h.normalization(cf.FILE_NAME, cf.HDSET_NAME, cf.BUFFER_JUMP, h5h.maxValue(cf.FILE_NAME, cf.HDSET_NAME, 100)) #Normalization of the H-field
 #h5h.normalization(cf.FILE_NAME, cf.EDSET_NAME, cf.BUFFER_JUMP, h5h.maxValue(cf.FILE_NAME, cf.EDSET_NAME, 100)) #Normalization of the E-field
-#h5h.normalization(cf.FILE_NAME, "Probes/Probe1", cf.BUFFER_JUMP, h5h.maxValue(cf.FILE_NAME, "Probes/Probe1", 100))
+norma_const = h5h.maxValue(cf.FILE_NAME, "Probes/Reflected", 100)
+h5h.normalization(cf.FILE_NAME, "Probes/Reflected", cf.BUFFER_JUMP, norma_const)
+h5h.normalization(cf.FILE_NAME, "Probes/Transmitted", cf.BUFFER_JUMP, norma_const)
 print("Check2")
 hdf5_handler.close_file()
 print("Simulación terminada de manera segura.")

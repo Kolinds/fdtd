@@ -20,11 +20,12 @@ mpl.rcParams['ytick.right'] = True
 mpl.rcParams['xtick.major.width'] = 1.0
 mpl.rcParams['ytick.major.width'] = 1.0
 
+FILE_NAME = "plasma_data.hdf5"
 DSET_NAME = cf.EDSET_NAME
 
 # Cargar datos con manejo de errores básico
 try:
-    with h5py.File(cf.FILE_NAME, "r") as f:
+    with h5py.File(FILE_NAME, "r") as f:
         all_data = f[DSET_NAME][:cf.TOTAL_TIME, :]
         space_size = all_data.shape[1]
 except Exception as e:
@@ -71,7 +72,7 @@ time_text = ax1.text(0.03, 0.92, '', transform=ax1.transAxes, fontsize=12,
 ax1.legend(loc="upper right", framealpha=0.9, edgecolor="black")
 
 starting_frame = 0
-frame_interval = 20
+frame_interval = 100
 
 def anime_func(frame):
     real_frame = (frame * frame_interval) + starting_frame

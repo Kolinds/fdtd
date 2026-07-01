@@ -8,11 +8,15 @@ import config as cf  # Importamos tu archivo de configuración
 # CONFIGURACIÓN: Rutas y Datasets
 # ==========================================
 ARCHIVO_HDF5 = "wave_data.hdf5"
-DATASET_DFT = "/Probes/Probe1"  
+DATASET_DFT = "/Probes/Reflected"   
+
 NOMBRE_GRAFICO_SALIDA = "respuesta_frecuencia_dft.pdf" 
 
+# --- CONTROL DE LAS LÍNEAS VERTICALES ---
+MOSTRAR_LINEA_PLASMA = True  # Activa/Desactiva la línea de frecuencia de plasma
+MOSTRAR_LINEA_PEAK = True    # ¡NUEVO! Activa/Desactiva la línea de frecuencia pico
+
 # --- CONTROL MANUAL DE UNIDADES DEL EJE X ---
-# Configura aquí el factor de escala y la etiqueta que desees:
 DIVISOR_X = 1e3      # Usa: 1 para Hz, 1e6 para MHz, 1e9 para GHz, etc.
 UNIDAD_X = "KHz"     # El texto que acompañará al eje X: "Hz", "MHz", "GHz"...
 
@@ -55,10 +59,18 @@ def graficar_dft_fisica(ruta_archivo):
 
         # Vector de frecuencias original (en Hz)
         frecuencias_hz = np.arange(len(datos_dft)) * delta_f
-        
-        # Aplicamos tu división manual para la visualización
         frecuencias_escaladas = frecuencias_hz / DIVISOR_X
         
+        # Cálculo de la frecuencia de plasma
+        lambda_plasma = cf.PLASMA_WAVELENGTH_STEPS * delta_x
+        f_plasma_hz = C_LIGHT / lambda_plasma
+        f_plasma_escalada = f_plasma_hz / DIVISOR_X
+
+        # ¡NUEVO! Cálculo automático de la frecuencia pico
+        lambda_peak = cf.STEPS_WAVELENGTH * delta_x
+        f_peak_hz = C_LIGHT / lambda_peak
+        f_peak_escalada = f_peak_hz / DIVISOR_X
+
         # Procesamiento del DFT (solo magnitud)
         magnitud = np.abs(datos_dft)
 
@@ -67,7 +79,7 @@ def graficar_dft_fisica(ruta_archivo):
         # ---------------------------------------------------------
         fig, ax = plt.subplots(figsize=(7, 4.5), dpi=150)
 
-        # Trazado de la señal con los datos escalados
+        # Trazado de la señal original
         ax.plot(
             frecuencias_escaladas, 
             magnitud, 
@@ -76,17 +88,39 @@ def graficar_dft_fisica(ruta_archivo):
             zorder=3
         )
 
+        # Condicional para la línea de plasma
+        if MOSTRAR_LINEA_PLASMA:
+            ax.axvline(
+                x=f_plasma_escalada, 
+                color="firebrick",    
+                linestyle="--",       
+                linewidth=1.3, 
+                label=r"Frecuencia de plasma $f_p$",
+                zorder=2
+            )
+
+        # ¡NUEVO! Condicional para la línea de frecuencia pico
+        if MOSTRAR_LINEA_PEAK:
+            ax.axvline(
+                x=f_peak_escalada, 
+                color="royalblue",    # Azul elegante para contrastar con el rojo
+                linestyle="--",       
+                linewidth=1.3, 
+                label=r"Frecuencia pico $f_k$",
+                zorder=2
+            )
+
+        # Si cualquiera de las dos líneas está activa, muestra la leyenda
+        if MOSTRAR_LINEA_PLASMA or MOSTRAR_LINEA_PEAK:
+            ax.legend(loc="upper right", frameon=True, edgecolor="none")
+
         # Configuración dinámica de los ejes
         ax.set_xlabel(f"Frecuencia ({UNIDAD_X})", fontsize=13)
         ax.set_ylabel("Espectro normalizado", fontsize=13)
         
-        # El límite también se ajusta automáticamente con tu divisor
         ax.set_xlim(0, cf.MAX_FREQ / DIVISOR_X)
-        ax.set_ylim(bottom=0)
-
-        # Forzamos a que no meta multiplicadores raros por su cuenta
+        ax.set_ylim(0, 1)
         ax.ticklabel_format(style='plain', axis='x', useOffset=False)
-
         ax.grid(False) 
         plt.tight_layout()
         
@@ -98,13 +132,15 @@ def graficar_dft_fisica(ruta_archivo):
 
         plt.show()
 
-        # Resumen en consola para verificación rápida
+        # Resumen en consola
         print("\n--- Parámetros Físicos Calculados ---")
         print(f"Malla espacial (delta_x) : {delta_x:.4e} m")
         print(f"Paso de tiempo (delta_t) : {delta_t:.4e} s")
         print(f"Tiempo de simulación     : {t_total:.4e} s")
         print(f"Resolución (delta_f)     : {delta_f:.2f} Hz")
         print(f"Frecuencia máxima (lim)  : {cf.MAX_FREQ:.2e} Hz")
+        print(f"Frecuencia de Plasma (fp): {f_plasma_hz:.2e} Hz ({f_plasma_escalada:.2f} {UNIDAD_X})")
+        print(f"Frecuencia Pico (f0)     : {f_peak_hz:.2e} Hz ({f_peak_escalada:.2f} {UNIDAD_X})") # ¡NUEVO!
         print("-------------------------------------")
 
     except KeyError:

@@ -59,8 +59,8 @@ def update_imp_ez_ADE(start, end, hy, ez, ez_old, hy_old, coef_d, c_a, c_b, d_a,
         coef_d[0] = ((c_b / 2.0) * (1 + d_a) * hy[start] 
                      - c_b * hy[start - 1]
                      + (c_a + alpha_b) * ez_old[start] 
-                     - alpha_b * ez_old[start + 1]) 
-                     #- c_b * ((1 + coef_jj) / 2.0) * pol_current[0])
+                     - alpha_b * ez_old[start + 1]
+                     - c_b * ((1 + coef_jj) / 2.0) * pol_current[0])
         coef_d[0] = coef_d[0] / calc_denom[0]
 
         # 2. Nodos internos (Desde start + 1 HASTA end - 2)
@@ -72,8 +72,8 @@ def update_imp_ez_ADE(start, end, hy, ez, ez_old, hy_old, coef_d, c_a, c_b, d_a,
                    - (c_b / 2.0) * (1 + d_a) * hy[m - 1] 
                    - alpha_b * ez_old[m - 1] 
                    + (c_a + 2 * alpha_b) * ez_old[m] 
-                   - alpha_b * ez_old[m + 1])
-                   #- c_b * ((1 + coef_jj) / 2.0) * pol_current[m_retarded])
+                   - alpha_b * ez_old[m + 1]
+                   - c_b * ((1 + coef_jj) / 2.0) * pol_current[m_retarded])
                    
             coef_d[m_retarded] = (rhs - coef_a[m_retarded] * coef_d[m_retarded - 1]) / calc_denom[m_retarded]
             
@@ -81,8 +81,8 @@ def update_imp_ez_ADE(start, end, hy, ez, ez_old, hy_old, coef_d, c_a, c_b, d_a,
         coef_d[last_idx] = (c_b * hy[end - 1] 
                           - (c_b / 2.0) * (1 + d_a) * hy[end - 2] 
                           - alpha_b * ez_old[end - 2] 
-                          + (c_a + alpha_b) * ez_old[end - 1])
-                          #- c_b * ((1 + coef_jj) / 2.0) * pol_current[last_idx])
+                          + (c_a + alpha_b) * ez_old[end - 1]
+                          - c_b * ((1 + coef_jj) / 2.0) * pol_current[last_idx])
         coef_d[last_idx] = (coef_d[last_idx] - coef_a[last_idx] * coef_d[last_idx - 1]) / calc_denom[last_idx]
 
         # 4. Sustitución hacia atrás (Algoritmo de Thomas) 
@@ -91,7 +91,7 @@ def update_imp_ez_ADE(start, end, hy, ez, ez_old, hy_old, coef_d, c_a, c_b, d_a,
             m_retarded = m - start
             ez[m] = coef_d[m_retarded] - coef_c[m_retarded] * ez[m + 1]
         
-        # 5. Actualizar la corriente de polarización dispersiva
+        #5. Actualizar la corriente de polarización dispersiva
         for m in range(start, end):
             m_retarded = m - start
             pol_current[m_retarded] = coef_jj * pol_current[m_retarded] + coef_je * (ez[m] + ez_old[m])
